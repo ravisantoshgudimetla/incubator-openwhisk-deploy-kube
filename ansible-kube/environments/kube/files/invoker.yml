@@ -35,8 +35,8 @@ spec:
 
       containers:
       - name: invoker
-        imagePullPolicy: Always
-        image: openwhisk/invoker
+        # imagePullPolicy: Always
+        image: whisk/invoker:123
         command: [ "/bin/bash", "-c", "COMPONENT_NAME=$(hostname | cut -d'-' -f2) /invoker/bin/invoker `hostname | cut -d'-' -f2`" ]
         env:
           - name: "CONSULSERVER_HOST"
@@ -53,6 +53,10 @@ spec:
             value: "2s"
           - name: "SERVICE_CHECK_INTERVAL"
             value: "15s"
+          - name: "INVOKER_USEREACTIVEPOOL"
+            value: "true"
+          - name: "DOCKER_API_VERSION"
+            value: "1.23"
         ports:
         - name: invoker
           containerPort: 8080

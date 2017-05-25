@@ -25,7 +25,6 @@ EndOfMessage
   OPENWHISK_DIR=$HOME/workspace/openwhisk
 else
   OPENWHISK_DIR="$2"
-exit 1
 fi
 
 
@@ -61,7 +60,7 @@ pushd $SCRIPTDIR/nginx
 
  NGINX_IMAGE=$(docker build . | grep "Successfully built" | awk '{print $3}')
  docker tag $NGINX_IMAGE "$1"/whisk_nginx
- docker push "$1"/whisk_nginx
+ # docker push "$1"/whisk_nginx
 
  # cleanup
  rm wsk
@@ -76,7 +75,7 @@ BuildKubeConfigureImage () {
 
    WHISK_DEPLOY_IMAGE=$(docker build --build-arg KUBE_VERSION="$2" . | grep "Successfully built" | awk '{print $3}')
    docker tag $WHISK_DEPLOY_IMAGE "$1"/whisk_config:"$2"-dev
-   docker push "$1"/whisk_config:"$2"-dev
+   # docker push "$1"/whisk_config:"$2"-dev
 
    # rm the whisk cli to keep things clean
    rm wsk
@@ -85,5 +84,5 @@ BuildKubeConfigureImage () {
 
 # build the OpenWhisk configure image
 BuildKubeConfigureImage "$1" "v1.5.6"
-BuildKubeConfigureImage "$1" "v1.6.2"
+# BuildKubeConfigureImage "$1" "v1.6.2"
 
