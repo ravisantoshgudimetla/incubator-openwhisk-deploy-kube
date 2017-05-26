@@ -9,10 +9,10 @@ minikube ssh
   ip link set docker0 promisc on
   exit
   exit
+eval $(minikube docker-env)
 cd ~/src/openwhisk
 ./gradlew :core:invoker:distDocker -PdockerImageTag=123
 cd ~/src/incubator-openwhisk-deploy-kube
-eval $(minikube docker-env)
 docker/build.sh projectodd ~/src/openwhisk
 kubectl create -f configure/openwhisk_kube_namespace.yml
 kubectl create -f configure/configure_whisk.yml
