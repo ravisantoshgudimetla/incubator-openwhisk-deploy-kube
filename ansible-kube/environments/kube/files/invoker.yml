@@ -15,6 +15,7 @@ spec:
         name: invoker
     spec:
       restartPolicy: Always
+      serviceAccountName: openwhisk
       containers:
       - name: invoker
         # imagePullPolicy: Always

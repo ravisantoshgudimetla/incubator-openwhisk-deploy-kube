@@ -14,7 +14,7 @@ spec:
         name: zookeeper
     spec:
       restartPolicy: Always
-
+      serviceAccountName: openwhisk
       containers:
       - name: zookeeper
         image: zookeeper:3.4

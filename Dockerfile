@@ -26,6 +26,9 @@ RUN apt-get -y update && \
 # clone OpenWhisk and install dependencies
 # Note that we are not running the install all script since we do not care about Docker.
 RUN git clone https://github.com/openwhisk/openwhisk && \
+    cd openwhisk && \
+    git checkout 09af32f && \
+    cd .. && \
     /openwhisk/tools/ubuntu-setup/misc.sh && \
     /openwhisk/tools/ubuntu-setup/pip.sh && \
     /openwhisk/tools/ubuntu-setup/java8.sh && \

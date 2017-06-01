@@ -31,6 +31,7 @@ spec:
             path: nginx.conf
       - name: logs
         emptyDir: {}
+      serviceAccountName: openwhisk
       containers:
       - name: nginx
         imagePullPolicy: Always

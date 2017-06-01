@@ -21,6 +21,7 @@ spec:
       - name: consulconf
         configMap:
           name: consul
+      serviceAccountName: openwhisk
       containers:
       - name: consul
         imagePullPolicy: IfNotPresent
@@ -65,6 +66,8 @@ spec:
         volumeMounts:
         - name: consulconf
           mountPath: "/consul/config/config.json"
+        securityContext:
+          privileged: true
 
       - name: registrator
         image: gliderlabs/registrator
@@ -77,3 +80,5 @@ spec:
         volumeMounts:
         - name: dockersock
           mountPath: "/tmp/docker.sock"
+        securityContext:
+          privileged: true

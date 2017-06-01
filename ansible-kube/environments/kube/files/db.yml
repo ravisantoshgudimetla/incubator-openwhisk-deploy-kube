@@ -14,7 +14,7 @@ spec:
         name: couchdb
     spec:
       restartPolicy: Always
-
+      serviceAccountName: openwhisk
       containers:
       - name: couchdb
         imagePullPolicy: IfNotPresent
