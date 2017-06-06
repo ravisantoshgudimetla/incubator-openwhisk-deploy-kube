@@ -5,9 +5,7 @@ https://github.com/projectodd/incubator-openwhisk/ checked out at
 
 ```
 minishift start (--vm-driver virtualbox if you use virtualbox)
-minishift ssh
-  sudo ip link set docker0 promisc on
-  exit
+minishift ssh -- sudo ip link set docker0 promisc on
 eval $(minishift docker-env)
 cd ~/src/openwhisk
 ./gradlew :core:invoker:distDocker -PdockerImageTag=123
