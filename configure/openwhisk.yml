@@ -21,13 +21,20 @@ spec:
         name: couchdb
     spec:
       restartPolicy: Always
+      volumes:
+      - name: openwhisk-config
+        configMap:
+          name: openwhisk-config
       containers:
       - name: couchdb
         imagePullPolicy: IfNotPresent
-        image: couchdb:1.6
+        image: projectodd/whisk_couchdb:dev
         ports:
         - name: couchdb
           containerPort: 5984
+        volumeMounts:
+          - name: openwhisk-config
+            mountPath: "/openwhisk_config"
 ---
 apiVersion: v1
 kind: Service
@@ -284,6 +291,7 @@ metadata:
 spec:
   selector:
     name: controller
+  type: NodePort
   ports:
     - port: 10001
       targetPort: 8080
