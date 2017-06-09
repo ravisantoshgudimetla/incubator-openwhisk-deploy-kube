@@ -6,8 +6,13 @@ RUN apt-get -y update && \
       git \
       curl \
       sudo \
-      python-pip
+      python-pip \
+      python-dev \
+      libffi-dev
 
+
+# Workaround a bug in cffi and Debian Jesse that gets hit in ansible.sh
+RUN pip install --upgrade cffi
 
 RUN git clone https://github.com/openwhisk/openwhisk /openwhisk
 RUN /openwhisk/tools/ubuntu-setup/ansible.sh
