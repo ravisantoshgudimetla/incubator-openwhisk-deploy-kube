@@ -36,6 +36,8 @@ spec:
             value: "15s"
           - name: "INVOKER_USEREACTIVEPOOL"
             value: "true"
+          - name: "INVOKER_USEKUBERNETES"
+            value: "true"
         ports:
         - name: invoker
           containerPort: 8080
