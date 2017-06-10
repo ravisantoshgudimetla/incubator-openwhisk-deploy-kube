@@ -18,6 +18,15 @@ Make sure all pods enter the Running state before moving on. If not,
 something broken and start troubleshooting by looking in the logs of
 the failing pods.
 
+Then, wait until the controller recognizes the invoker as healthy:
+
+```
+kubectl -n openwhisk logs -f $(kubectl -n openwhisk get pods | grep controller | awk '{print $1}') | grep "invoker status changed"
+```
+
+You're looking for a message like `invoker status changed to invoker0:
+Healthy`
+
 This doesn't yet include the nginx container, it just exposes the
 controller service. If using `minikube`, you can get the url for the
 service with:
