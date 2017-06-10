@@ -10,7 +10,7 @@ minikube ssh -- sudo ip link set docker0 promisc on
 Then, deploy OpenWhisk:
 
 ```
-kubectl create -f configure/openwhisk.yml
+kubectl create -f https://raw.githubusercontent.com/projectodd/incubator-openwhisk-deploy-kube/simplify-deployment/configure/openwhisk.yml
 watch kubectl -n openwhisk get all
 ```
 
