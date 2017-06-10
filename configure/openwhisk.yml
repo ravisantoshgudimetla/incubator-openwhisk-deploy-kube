@@ -105,7 +105,7 @@ spec:
       containers:
       - name: couchdb
         imagePullPolicy: IfNotPresent
-        image: projectodd/whisk_couchdb:dev
+        image: projectodd/whisk_couchdb
         ports:
         - name: couchdb
           containerPort: 5984
@@ -253,7 +253,7 @@ spec:
       containers:
       - name: controller
         imagePullPolicy: IfNotPresent
-        image: projectodd/whisk_controller:dev
+        image: projectodd/whisk_controller
         ports:
         - name: controller
           containerPort: 8080
