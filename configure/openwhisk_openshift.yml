@@ -256,6 +256,11 @@ metadata:
 data:
   controller.opts: ""
   java.opts: -Xmx2g
+  init: |
+    source /openwhisk_config/env
+    echo "Waiting for couchdb to be available"
+    until $(curl --output /dev/null --silent --head --fail http://${DB_HOST}:${DB_PORT}/_all_dbs); do printf '.'; sleep 1; done
+    /controller/bin/controller
 ---
 apiVersion: extensions/v1beta1
 kind: Deployment
@@ -282,6 +287,7 @@ spec:
       - name: controller
         imagePullPolicy: IfNotPresent
         image: projectodd/controller:openshift-latest
+        command: ["/bin/bash", "-o", "allexport", "/controller_config/init"]
         ports:
         - name: controller
           containerPort: 8080
