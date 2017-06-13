@@ -1,17 +1,17 @@
-# Deploying to kube via a single yml file
+# Deploying to minishift via a single yml file
 
-First, start minikube and fix a networking bug in current releases:
+First, start minishift and fix a networking bug in current releases:
 
 ```
-minikube start
-minikube ssh -- sudo ip link set docker0 promisc on
+minishift start
+minishift ssh -- sudo ip link set docker0 promisc on
 ```
 
 Then, deploy OpenWhisk:
 
 ```
-kubectl create -f https://raw.githubusercontent.com/projectodd/incubator-openwhisk-deploy-kube/simplify-deployment/configure/openwhisk.yml
-watch kubectl -n openwhisk get all
+oc create -f configure/openwhisk_openshift.yml
+watch oc get all
 ```
 
 Make sure all pods enter the Running state before moving on. If not,
@@ -21,18 +21,17 @@ the failing pods.
 Then, wait until the controller recognizes the invoker as healthy:
 
 ```
-kubectl -n openwhisk logs -f $(kubectl -n openwhisk get pods | grep controller | awk '{print $1}') | grep "invoker status changed"
+oc logs -f $(oc get pods | grep controller | awk '{print $1}') | grep "invoker status changed"
 ```
 
 You're looking for a message like `invoker status changed to invoker0:
 Healthy`
 
 This doesn't yet include the nginx container, it just exposes the
-controller service. If using `minikube`, you can get the url for the
-service with:
+controller service. You can get the url for the service with:
 
 ```
-minikube -n openwhisk service controller --url
+oc get route/controller --template={{.spec.host}}
 ```
 
 TODO: use secrets for auth, not the configmap
@@ -42,8 +41,8 @@ $PATH (download from
 https://github.com/apache/incubator-openwhisk-cli/releases/), then:
 
 ```
-export AUTH_SECRET=$(kubectl -n openwhisk get configmap openwhisk-config -o yaml | grep 'AUTH_WHISK_SYSTEM=' | awk -F '=' '{print $2}')
-wsk property set --auth $AUTH_SECRET --apihost $(minikube -n openwhisk service controller --url)
+export AUTH_SECRET=$(oc get configmap openwhisk-config -o yaml | grep 'AUTH_WHISK_SYSTEM=' | awk -F '=' '{print $2}')
+wsk property set --auth $AUTH_SECRET --apihost http://$(oc get route/controller --template={{.spec.host}})
 wsk list
 wsk action invoke /whisk.system/utils/echo -p message hello -b
 ```
@@ -52,13 +51,27 @@ wsk action invoke /whisk.system/utils/echo -p message hello -b
 ## Rebuilding the images locally:
 
 ```
-eval $(minikube docker-env)
-docker build --tag projectodd/whisk_controller:latest docker/controller
-docker build --tag projectodd/whisk_couchdb:latest docker/couchdb
+eval $(minishift docker-env)
+docker build --tag projectodd/whisk_couchdb:openshift-latest docker/couchdb
+docker build --tag projectodd/whisk_zookeeper:openshift-latest docker/zookeeper
+docker build --tag projectodd/whisk_kafka:openshift-latest docker/kafka
+docker build --tag projectodd/whisk_catalog:openshift-latest docker/catalog
 ```
 
 ## Public Docker Images
 
-Docker Hub is configured to automatically rebuild
-projectodd/whisk_controller and projectodd/whisk_couchdb on every push
-to this branch.
+The projectodd/whisk_* images above are automatically built by
+DockerHub on every push of this repository.
+
+The OpenShift-specific OpenWhisk images
+(projectodd/controller:openshift-latest and friends) are built from
+https://github.com/projectodd/incubator-openwhisk/tree/kube-container-openshift
+(note the `kube-container-openshift` branch) with the command:
+
+```
+export SHORT_COMMIT=$(git rev-parse HEAD | cut -c 1-7)
+./gradlew distDocker -PdockerImagePrefix=projectodd -PdockerImageTag=openshift-latest
+./gradlew distDocker -PdockerImagePrefix=projectodd -PdockerImageTag=openshift-${SHORT_COMMIT}
+```
+
+To publish the above images, add `-PdockerRegistry=docker.io` to each of those commands.
