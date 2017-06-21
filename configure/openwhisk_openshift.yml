@@ -56,6 +56,8 @@ data:
     INVOKER_CONTAINER_NETWORK=bridge
     INVOKER_USEREACTIVEPOOL=true
     INVOKER_USEKUBERNETES=true
+    INVOKER_NUMCORE=4
+    INVOKER_CORESHARE=4
     
     NGINX_HOST=nginx
     NGINX_CONF_DIR=/tmp/nginx
@@ -355,10 +357,14 @@ metadata:
 data:
   init: |
     source /openwhisk_config/env
+    export ORDINAL=$(hostname | cut -d'-' -f2)
     echo "Waiting for controller to be available"
     until $(curl --output /dev/null --silent --head --fail http://${CONTROLLER_HOST}:${CONTROLLER_SERVICE_PORT}/ping); do printf '.'; sleep 1; done
-    export COMPONENT_NAME=$(hostname | cut -d'-' -f2)
-    /invoker/bin/invoker `hostname | cut -d'-' -f2`
+    export COMPONENT_NAME=${ORDINAL}
+    /invoker/bin/invoker ${ORDINAL}
+  cleanup: |
+    export ORDINAL=$(hostname | cut -d'-' -f2)
+    kubectl delete pod -l invoker=invoker${ORDINAL}
 ---
 apiVersion: apps/v1beta1
 kind: StatefulSet
@@ -385,7 +391,7 @@ spec:
       serviceAccountName: openwhisk
       containers:
       - name: invoker
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent
         image: projectodd/invoker:openshift-latest
         command: [ "/bin/bash", "-o", "allexport", "/invoker_config/init" ]
         env:
@@ -405,6 +411,10 @@ spec:
           mountPath: "/openwhisk_config"
         - name: invoker-config
           mountPath: "/invoker_config"
+        lifecycle:
+          preStop:
+            exec:
+              command: [ "/bin/bash", "/invoker_config/cleanup" ]
 ---
 apiVersion: v1
 kind: Service
