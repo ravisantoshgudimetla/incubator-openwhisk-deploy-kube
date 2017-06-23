@@ -5,11 +5,13 @@ First, start minishift and fix a networking bug in current releases:
 ```
 minishift start
 minishift ssh -- sudo ip link set docker0 promisc on
+eval $(minishift oc-env)
 ```
 
 Then, deploy OpenWhisk:
 
 ```
+oc new-project openwhisk
 oc create -f configure/openwhisk_openshift.yml
 watch oc get all
 ```
