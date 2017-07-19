@@ -17,4 +17,4 @@ until $(curl --output /dev/null --silent --head --fail http://${CONTROLLER_HOST}
 
 cd /openwhisk-catalog/packages
 
-./installCatalog.sh $AUTH_WHISK_SYSTEM http://${CONTROLLER_HOST}:${CONTROLLER_HOST_PORT} $CATALOG_NAMESPACE /openwhisk/bin/wsk
+./installCatalog.sh $AUTH_WHISK_SYSTEM http://${CONTROLLER_HOST}:${CONTROLLER_HOST_PORT} /openwhisk/bin/wsk
