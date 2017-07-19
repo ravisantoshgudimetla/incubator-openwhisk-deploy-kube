@@ -11,6 +11,11 @@ source /openwhisk_config/env
 # sets it to the entire tcp://host:port string
 export KAFKA_PORT=$KAFKA_HOST_PORT
 
+echo "Waiting for zookeeper to start"
+while ! nc -z ${ZOOKEEPER_HOST} ${ZOOKEEPER_HOST_PORT}; do
+  sleep 0.2
+done
+
 /start.sh &
 
 echo "Waiting for kafka to start"
