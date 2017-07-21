@@ -49,6 +49,21 @@ wsk list
 wsk action invoke /whisk.system/utils/echo -p message hello -b
 ```
 
+If that's successful, try a more complex example involving triggers and rules:
+
+```
+wsk trigger create every-5-seconds \
+    --feed  /whisk.system/alarms/alarm \
+    --param cron '*/5 * * * * *' \
+    --param maxTriggers 25 \
+    --param trigger_payload "{\"name\":\"Odin\",\"place\":\"Asgard\"}"
+wsk rule create \
+    invoke-periodically \
+    every-5-seconds \
+    /whisk.system/samples/greeting
+wsk activation poll
+```
+
 
 ## Rebuilding the images locally:
 
