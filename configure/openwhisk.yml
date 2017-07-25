@@ -48,6 +48,9 @@ data:
 
     INVOKER_CONTAINER_NETWORK=bridge
     INVOKER_USEREACTIVEPOOL=true
+    INVOKER_USEKUBERNETES=true
+    INVOKER_NUMCORE=4
+    INVOKER_CORESHARE=3
     
     NGINX_HOST=nginx.openwhisk
     NGINX_CONF_DIR=/tmp/nginx
@@ -102,16 +105,20 @@ spec:
       - name: openwhisk-config
         configMap:
           name: openwhisk-config
+      - name: couchdb-data
+        emptyDir: {}
       containers:
       - name: couchdb
         imagePullPolicy: IfNotPresent
-        image: projectodd/whisk_couchdb
+        image: projectodd/whisk_couchdb:openshift-latest
         ports:
         - name: couchdb
           containerPort: 5984
         volumeMounts:
           - name: openwhisk-config
             mountPath: "/openwhisk_config"
+          - name: couchdb-data
+            mountPath: "/usr/local/var/lib/couchdb"
 ---
 apiVersion: v1
 kind: Service
@@ -143,9 +150,14 @@ spec:
         name: zookeeper
     spec:
       restartPolicy: Always
+      volumes:
+      - name: zookeeper-data
+        emptyDir: {}
+      - name: zookeeper-datalog
+        emptyDir: {}
       containers:
       - name: zookeeper
-        image: zookeeper:3.4
+        image: projectodd/whisk_zookeeper:openshift-latest
         imagePullPolicy: IfNotPresent
         ports:
         - name: zookeeper
@@ -154,6 +166,11 @@ spec:
           containerPort: 2888
         - name: leader-election
           containerPort: 3888
+        volumeMounts:
+          - mountPath: /data
+            name: zookeeper-data
+          - mountPath: /datalog
+            name: zookeeper-datalog
 ---
 apiVersion: v1
 kind: Service
@@ -191,18 +208,32 @@ spec:
         name: kafka
     spec:
       restartPolicy: Always
+      volumes:
+      - name: openwhisk-config
+        configMap:
+          name: openwhisk-config
+      - name: kafka-logs
+        emptyDir: {}
+      - name: kafka-java-logs
+        emptyDir: {}
       containers:
       - name: kafka
-        image: ches/kafka:0.10.0.1
+        image: projectodd/whisk_kafka:openshift-latest
         imagePullPolicy: IfNotPresent
         env:
         - name: "KAFKA_ADVERTISED_HOST_NAME"
-          value: kafka.openwhisk
-        - name: "KAFKA_PORT"
-          value: "9092"
+          value: kafka
         ports:
         - name: kafka
           containerPort: 9092
+        volumeMounts:
+          - name: openwhisk-config
+            mountPath: "/openwhisk_config"
+          - name: kafka-logs
+            mountPath: "/data"
+          - name: kafka-java-logs
+            mountPath: "/logs"
+            
 ---
 apiVersion: v1
 kind: Service
@@ -227,6 +258,11 @@ metadata:
 data:
   controller.opts: ""
   java.opts: -Xmx2g
+  init: |
+    source /openwhisk_config/env
+    echo "Waiting for couchdb to be available"
+    until $(curl --output /dev/null --silent --head --fail http://${DB_HOST}:${DB_PORT}/_all_dbs); do printf '.'; sleep 1; done
+    /controller/bin/controller
 ---
 apiVersion: extensions/v1beta1
 kind: Deployment
@@ -253,7 +289,8 @@ spec:
       containers:
       - name: controller
         imagePullPolicy: IfNotPresent
-        image: projectodd/whisk_controller
+        image: projectodd/controller:openshift-latest
+        command: ["/bin/bash", "-o", "allexport", "/controller_config/init"]
         ports:
         - name: controller
           containerPort: 8080
@@ -308,10 +345,14 @@ metadata:
 data:
   init: |
     source /openwhisk_config/env
+    export ORDINAL=$(hostname | cut -d'-' -f2)
     echo "Waiting for controller to be available"
     until $(curl --output /dev/null --silent --head --fail http://${CONTROLLER_HOST}:${CONTROLLER_SERVICE_PORT}/ping); do printf '.'; sleep 1; done
-    export COMPONENT_NAME=$(hostname | cut -d'-' -f2)
-    /invoker/bin/invoker `hostname | cut -d'-' -f2`
+    export COMPONENT_NAME=${ORDINAL}
+    /invoker/bin/invoker ${ORDINAL}
+  cleanup: |
+    export ORDINAL=$(hostname | cut -d'-' -f2)
+    kubectl delete pod -l invoker=invoker${ORDINAL}
 ---
 apiVersion: apps/v1beta1
 kind: StatefulSet
@@ -353,8 +394,8 @@ spec:
           name: invoker
       containers:
       - name: invoker
-        imagePullPolicy: Always
-        image: openwhisk/invoker
+        imagePullPolicy: IfNotPresent
+        image: projectodd/invoker:openshift-latest
         command: [ "/bin/bash", "-o", "allexport", "/invoker_config/init" ]
         env:
           - name: "PORT"
