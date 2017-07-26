@@ -2,6 +2,7 @@
 # general properties
 kube_pod_dir: "{{ playbook_dir }}/environments/kube/files"
 whisk_version_name: kube
+config_root_dir: /tmp
 whisk_logs_dir: /tmp/wsklogs
 
 # docker properties
@@ -51,11 +52,6 @@ kafka_host: kafka.openwhisk
 zookeeper_host: zookeeper.openwhisk
 
 # invoker properties
-# The invoker_count property is overwritten by the (kubernetes/configure/configure.sh)
-# script. This way the source of truth for the number of Invoker instances is kept
-# in the Kubernetes Invoker deployment file. The configure.sh script will read the
-# Kube file and replace this one to keep everything in sync.
-invoker_count: REPLACE_INVOKER_COUNT
 invoker_port: 8080
 
 # registry

@@ -1,8 +1,9 @@
 # OpenWhisk Deployment for Kubernetes
 
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0)
 [![Build Status](https://travis-ci.org/apache/incubator-openwhisk-deploy-kube.svg?branch=master)](https://travis-ci.org/apache/incubator-openwhisk-deploy-kube)
 
-This repo can be used to deploy OpenWhisk to a Kubernetes cluster.
+This repository can be used to deploy OpenWhisk to a Kubernetes cluster.
 To accomplish this, we have created a Kubernetes job responsible for
 deploying OpenWhisk from inside of Kubernetes. This job runs through
 the OpenWhisk Ansible playbooks with some modifications to "Kube-ify"
@@ -54,6 +55,10 @@ ways to setup a Dev/Test environmnet depending on your host OS. To mitigate that
 VirtualBox with a Ubuntu VM. For the full instructions on setting an environment up,
 take a look at these [instructions](/docs/setting_up_kube/README.md).
 
+We also have experimental support for
+[Minikube](https://github.com/kubernetes/minikube), see the
+[Minikube-specific install instructions](/minikube/README.md) for more details.
+
 # Configure OpenWhisk
 
 To configure OpenWhisk on Kubernetes, you will need to target a Kubernetes
@@ -91,21 +96,13 @@ the logs from the configuration Pod creted by the previous command.
 kubectl -n openwhisk logs configure-openwhisk-XXXXX
 ```
 
-Once the configuration job successfully finishes, you will need the
-default user auth tokens provided by OpenWhisk. As part of the deployment
-process, we store these tokens in Kubernetes
-[secrets](https://kubernetes.io/docs/concepts/configuration/secret/).
-To get these tokens, you can run the following command:
-
-```
-kubectl -n openwhisk get secret openwhisk-auth-tokens -o yaml
-```
-
-To use the secrets, you will need to base64 decode them. E.g:
-
-```
-export AUTH_SECRET=$(kubectl -n openwhisk get secret openwhisk-auth-tokens -o yaml | grep 'auth_whisk_system:' | awk '{print $2}' | base64 --decode)
-```
+Once the configuration job successfully finishes, you will need
+manually deploy the rest of the OpenWhisk components.
+* [Zookeeper](kubernetes/zookeeper/README.md)
+* [Kafka](kubernetes/kafka/README.md)
+* [Controller](kubernetes/controller/README.md)
+* [Invoker](kubernetes/invoker/README.md)
+* [Nginx](kubernetes/nginx/README.md)
 
 From here, you will now need to get the publicly available address
 of Nginx.
@@ -131,7 +128,25 @@ Now you should be able to setup the wsk cli like normal and interact with
 Openwhisk.
 
 ```
-wsk property set --auth $AUTH_SECRET --apihost https://[nginx_ip]:$WSK_PORT
+wsk property set --auth 789c46b1-71f6-4ed5-8c54-816aa4f8c502:abczO3xZCLrMN6v2BKK1dXYFpXlPkccOFqm12CdAsMgRU4VrNZ9lyGVCGuMDGIwP --apihost https://[nginx_ip]:$WSK_PORT
+```
+
+Lastly, you will need to install the initial catalog. To do this, you will need
+to set the `OPENWHISK_HOME` environment variable:
+
+```
+export OPENWHISK_HOME [location of the openwhisk repo]
+```
+
+Then you should be able to run the following commands. Just make sure to
+replace the `[nginx_ip]` bellow.
+
+```
+  pushd /tmp
+    git clone https://github.com/apache/incubator-openwhisk-catalog
+    cd incubator-openwhisk-catalog/packages
+    ./installCatalog.sh 789c46b1-71f6-4ed5-8c54-816aa4f8c502:abczO3xZCLrMN6v2BKK1dXYFpXlPkccOFqm12CdAsMgRU4VrNZ9lyGVCGuMDGIwP https://[nginx_ip]:$WSK_PORT
+  popd
 ```
 
 # Cleanup
@@ -179,6 +194,13 @@ one the required dependencies is the wsk cli and to build it you will need
 to download the [OpenWhisk repo](https://github.com/openwhisk/openwhisk)
 and setup your invironment to build the docker images via gradle. That
 setup can be found [here](https://github.com/apache/incubator-openwhisk#native-development).
+
+**Important**
+To build custom docker images, you will need to be on a Linux machine.
+During the `wsk` cli build process it mounts a number of files from the
+host machine. Because of this, Golang determines that the `wsk` build
+architecture should be for macOS, but of course this is the wrong version
+when running later. It needs to be built for the Linux architecture.
 
 To use the script, it takes in 2 arguments:
 1. (Required) The first argument is the Docker account to push the built images
@@ -232,11 +254,6 @@ for Nginx and currently it has a static dns entry. Because of this, you
 will need to connect to OpenWhisk using the insecure mode (e.g. `wsk -i`).
 There is future work to make this CA-cert configurable.
 
-For now, OpenWhisk relies on part of the underlying infrastructure that Kube
-is running on. When deploying the Invoker for OpenWhisk, it mounts the hosts
-Docker socket. This way OpenWhisk can quickly provision actions and does not
-have to run Docker inside of Docker.
-
 A couple of components for OpenWhisk on Kube deployment strategy requires custom
 built Docker images. One such component is Nginx and currently resides at
 [danlavine/whisk_nginx](https://hub.docker.com/r/danlavine/whisk_nginx/). There
@@ -255,13 +272,18 @@ the correct kubectl version to be built into `danlavine/whisk_config`. For now,
 there is only a version for Kube 1.5, and one can be built for 1.6, but there
 is no CI to test it against at the moment.
 
-**Minikube is not supported** at this time because it uses an old version
-of docker (1.11.x). See the the [Requirements](#requirements)
-section for more info.
+**Minikube (experimental)**
+We also have experimental support for
+* [Minikube](https://github.com/kubernetes/minikube), see the
+* [Minikube-specific install instructions](/minikube/README.md) for more details.
+
+**Bad Kube versions**
+* Kube 1.6.3 has an issue with volume mount subpaths. See
+  [here](https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG.md#v163)
+  for more information.
 
 ## Enhancements
 
-* Allow users to provide custom certs for Nginx
 * Enable the configuration job to run any number of times. This way it updates an already running
   OpenWhisk deployment on all subsequent runs
 * Use a public Edge Docker image once this [issue](https://github.com/apache/incubator-openwhisk/issues/2152)
