@@ -427,12 +427,9 @@ spec:
         - name: invoker-config
           mountPath: "/invoker_config"
         lifecycle:
-          postStart:
+          preStop:
             exec:
-              command:
-              - "/bin/bash"
-              - "-c"
-              - "docker pull openwhisk/nodejs6action && docker pull openwhisk/dockerskeleton && docker pull openwhisk/python2action && docker pull openwhisk/python3action && docker pull openwhisk/swift3action && docker pull openwhisk/java8action"
+              command: [ "/bin/bash", "/invoker_config/cleanup" ]
 ---
 apiVersion: v1
 kind: Service
@@ -449,3 +446,40 @@ spec:
     - port: 8080
       targetPort: 8080
       name: invoker
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: preload-openwhisk-runtimes
+  namespace: openwhisk
+  labels:
+    name: preload-openwhisk-runtimes
+spec:
+  completions: 1
+  template:
+    metadata:
+      labels:
+        name: preload-openwhisk-runtimes
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: preload-openwhisk-nodejs6
+        image: projectodd/nodejs6action:openshift-latest
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/sh", "-c", "echo", "success"]
+      - name: preload-openwhisk-python2
+        image: projectodd/python2action:openshift-latest
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/sh", "-c", "echo", "success"]
+      - name: preload-openwhisk-python3
+        image: projectodd/python3action:openshift-latest
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/sh", "-c", "echo", "success"]
+      - name: preload-openwhisk-swift3
+        image: projectodd/swift3action:openshift-latest
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/sh", "-c", "echo", "success"]
+      - name: preload-openwhisk-java8
+        image: projectodd/java8action:openshift-latest
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/sh", "-c", "echo", "success"]
