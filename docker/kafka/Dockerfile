@@ -7,6 +7,6 @@ RUN chgrp -R 0 /kafka \
 
 USER kafka
 
-COPY kafka-init.sh /init.sh
+COPY init.sh /init.sh
 
 ENTRYPOINT ["/bin/bash", "/init.sh"]
