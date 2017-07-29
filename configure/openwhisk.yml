@@ -32,7 +32,7 @@ data:
     LIMITS_ACTIONS_INVOKES_CONCURRENTINSYSTEM=5000
     LIMITS_TRIGGERS_FIRES_PERMINUTE=60
 
-    CONTROLLER_HOST=controller-0.controller.openwhisk
+    CONTROLLER_HOST=controller-0.controller
     CONTROLLER_HOST_PORT=8080
     
     CONSULSERVER_HOST=consul.openwhisk
@@ -586,6 +586,33 @@ spec:
           mountPath: "/etc/nginx/certs"
         - name: logs
           mountPath: "/logs"
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: install-openwhisk-catalog
+  namespace: openwhisk
+  labels:
+    name: install-openwhisk-catalog
+spec:
+  completions: 1
+  template:
+    metadata:
+      labels:
+        name: install-openwhisk-catalog
+    spec:
+      restartPolicy: Never
+      volumes:
+      - name: openwhisk-config
+        configMap:
+          name: openwhisk-config
+      containers:
+      - name: install-openwhisk-catalog
+        image: projectodd/whisk_catalog:openshift-latest
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        - name: openwhisk-config
+          mountPath: "/openwhisk_config"
 ---
 apiVersion: batch/v1
 kind: Job
