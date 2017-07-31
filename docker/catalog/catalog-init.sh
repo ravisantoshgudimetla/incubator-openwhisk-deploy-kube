@@ -22,5 +22,5 @@ cd /openwhisk-catalog/packages
 cd /openwhisk-package-alarms
 export TOKEN="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)"
 export NAMESPACE=$(cat /run/secrets/kubernetes.io/serviceaccount/namespace)
-export ROUTER_HOST=$(curl -s --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H "Authorization: Bearer ${TOKEN}" "https://${KUBERNETES_SERVICE_HOST}:${KUBERNETES_SERVICE_PORT}/oapi/v1/namespaces/${NAMESPACE}/routes/controller-secured?pretty=true" | grep '"host":' | head -n 1 | awk -F '"' '{print $4}')
+export ROUTER_HOST=$(curl -s --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H "Authorization: Bearer ${TOKEN}" "https://${KUBERNETES_SERVICE_HOST}:${KUBERNETES_SERVICE_PORT}/oapi/v1/namespaces/${NAMESPACE}/routes/openwhisk-secured?pretty=true" | grep '"host":' | head -n 1 | awk -F '"' '{print $4}')
 ./installCatalog.sh $AUTH_WHISK_SYSTEM http://${CONTROLLER_HOST}:${CONTROLLER_HOST_PORT} http://${DB_HOST}:${DB_PORT} whisk_alarms_ ${ROUTER_HOST}

@@ -23,7 +23,7 @@ the failing pods.
 Then, wait until the controller recognizes the invoker as healthy:
 
 ```
-oc logs -f $(oc get pods | grep controller | awk '{print $1}') | grep "invoker status changed"
+oc logs -f controller-0 | grep "invoker status changed"
 ```
 
 You're looking for a message like `invoker status changed to invoker0:
@@ -33,7 +33,7 @@ This doesn't yet include the nginx container, it just exposes the
 controller service. You can get the url for the service with:
 
 ```
-oc get route/controller --template={{.spec.host}}
+oc get route/openwhisk --template={{.spec.host}}
 ```
 
 TODO: use secrets for auth, not the configmap
@@ -44,7 +44,7 @@ https://github.com/apache/incubator-openwhisk-cli/releases/), then:
 
 ```
 export AUTH_SECRET=$(oc get configmap openwhisk-config -o yaml | grep 'AUTH_WHISK_SYSTEM=' | awk -F '=' '{print $2}')
-wsk property set --auth $AUTH_SECRET --apihost http://$(oc get route/controller --template={{.spec.host}})
+wsk property set --auth $AUTH_SECRET --apihost http://$(oc get route/openwhisk --template={{.spec.host}})
 wsk list
 wsk action invoke /whisk.system/utils/echo -p message hello -b
 ```
@@ -72,6 +72,7 @@ eval $(minishift docker-env)
 docker build --tag projectodd/whisk_couchdb:openshift-latest docker/couchdb
 docker build --tag projectodd/whisk_zookeeper:openshift-latest docker/zookeeper
 docker build --tag projectodd/whisk_kafka:openshift-latest docker/kafka
+docker build --tag projectodd/whisk_nginx:openshift-latest docker/nginx
 docker build --tag projectodd/whisk_catalog:openshift-latest docker/catalog
 ```
 
