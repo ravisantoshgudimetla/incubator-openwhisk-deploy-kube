@@ -24,4 +24,10 @@ RUN rm /etc/nginx/cli/go/download/mac/386/wsk.zip
 RUN rm /etc/nginx/cli/go/download/mac/amd64/wsk.zip
 RUN rm /etc/nginx/cli/go/download/windows/386/wsk.zip
 
-COPY blackbox-0.1.0.tar.gz /etc/nginx/blackbox-0.1.0.tar.gz
+# COPY blackbox-0.1.0.tar.gz /etc/nginx/blackbox-0.1.0.tar.gz
+
+RUN mkdir -p /var/cache/nginx \
+  && chgrp -R 0 /var/cache/nginx \
+  && chmod -R g+rwX /var/cache/nginx \
+  && chgrp -R 0 /var/run \
+  && chmod -R g+rwX /var/run
