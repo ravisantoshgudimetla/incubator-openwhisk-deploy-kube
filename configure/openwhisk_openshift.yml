@@ -39,8 +39,8 @@ data:
     LIMITS_ACTIONS_INVOKES_CONCURRENTINSYSTEM=5000
     LIMITS_TRIGGERS_FIRES_PERMINUTE=60
 
-    CONTROLLER_HOST=controller
-    CONTROLLER_HOST_PORT=10001
+    CONTROLLER_HOST=controller-0.controller
+    CONTROLLER_HOST_PORT=8080
 
     CONSULSERVER_HOST=consul
     CONSUL_HOST=consul
@@ -211,26 +211,63 @@ spec:
     spec:
       restartPolicy: Always
       volumes:
-      - name: openwhisk-config
-        configMap:
-          name: openwhisk-config
       - name: kafka-logs
         emptyDir: {}
       - name: kafka-java-logs
         emptyDir: {}
       containers:
       - name: kafka
-        image: projectodd/whisk_kafka:openshift-latest
         imagePullPolicy: IfNotPresent
-        env:
-        - name: "KAFKA_ADVERTISED_HOST_NAME"
-          value: kafka
+        image: projectodd/whisk_kafka:openshift-latest
         ports:
         - name: kafka
           containerPort: 9092
+        env:
+        - name: "KAFKA_ADVERTISED_HOST_NAME"
+          value: kafka
+        - name: "KAFKA_PORT"
+          value: "9092"
+
+        # message settings
+        - name: "REPLICATION_FACTOR"
+          value: "1"
+        - name: "PARTITIONS"
+          value: "1"
+
+        # health topic settings
+        - name: "KAFKA_TOPICS_HEALTH_RETENTIONBYTES"
+          value: "536870912"
+        - name: "KAFKA_TOPICS_HEALTH_RETENTIONMS"
+          value: "1073741824"
+        - name: "KAFKA_TOPICS_HEALTH_SEGMENTBYTES"
+          value: "3600000"
+
+        # complete topic settings
+        - name: "CONTROLLER_COUNT"
+          value: "2"
+        - name: "KAFKA_TOPICS_COMPLETED_RETENTIONBYTES"
+          value: "536870912"
+        - name: "KAFKA_TOPICS_COMPLETED_RETENTIONMS"
+          value: "1073741824"
+        - name: "KAFKA_TOPICS_COMPLETED_SEGMENTBYTES"
+          value: "3600000"
+
+        # invoker topic settings
+        - name: "INVOKER_COUNT"
+          value: "4"
+        - name: "KAFKA_TOPICS_INVOKER_RETENTIONBYTES"
+          value: "536870912"
+        - name: "KAFKA_TOPICS_INVOKER_RETENTIONMS"
+          value: "1073741824"
+        - name: "KAFKA_TOPICS_INVOKER_SEGMENTBYTES"
+          value: "3600000"
+
+        # zookeeper info
+        - name: "ZOOKEEPER_HOST"
+          value: "zookeeper"
+        - name: "ZOOKEEPER_PORT"
+          value: "2181"
         volumeMounts:
-          - name: openwhisk-config
-            mountPath: "/openwhisk_config"
           - name: kafka-logs
             mountPath: "/data"
           - name: kafka-java-logs
@@ -252,75 +289,6 @@ spec:
       name: kafka
 ---
 apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: controller
-data:
-  controller.opts: ""
-  java.opts: -Xmx2g
-  init: |
-    source /openwhisk_config/env
-    echo "Waiting for couchdb to be available"
-    until $(curl --output /dev/null --silent --head --fail http://${DB_HOST}:${DB_PORT}/_all_dbs); do printf '.'; sleep 1; done
-    /controller/bin/controller
----
-apiVersion: extensions/v1beta1
-kind: Deployment
-metadata:
-  name: controller
-  labels:
-    name: controller
-spec:
-  replicas: 1
-  template:
-    metadata:
-      labels:
-        name: controller
-    spec:
-      restartPolicy: Always
-      volumes:
-      - name: openwhisk-config
-        configMap:
-          name: openwhisk-config
-      - name: controller-config
-        configMap:
-          name: controller
-      containers:
-      - name: controller
-        imagePullPolicy: IfNotPresent
-        image: projectodd/controller:openshift-latest
-        command: ["/bin/bash", "-o", "allexport", "/controller_config/init"]
-        ports:
-        - name: controller
-          containerPort: 8080
-        volumeMounts:
-        - name: openwhisk-config
-          mountPath: "/openwhisk_config"
-        - name: controller-config
-          mountPath: "/controller_config"
-        env:
-        - name: "COMPONENT_NAME"
-          value: "controller"
-        - name: "SERVICE_CHECK_HTTP"
-          value: "/ping"
-        - name: "SERVICE_CHECK_TIMEOUT"
-          value: "2s"
-        - name: "SERVICE_CHECK_INTERVAL"
-          value: "15s"
-        - name: "PORT"
-          value: "8080"
-        - name: "JAVA_OPTS"
-          valueFrom:
-            configMapKeyRef:
-              name: controller
-              key: java.opts
-        - name: "CONTROLLER_OPTS"
-          valueFrom:
-            configMapKeyRef:
-              name: controller
-              key: controller.opts
----
-apiVersion: v1
 kind: Service
 metadata:
   name: controller
@@ -329,43 +297,124 @@ metadata:
 spec:
   selector:
     name: controller
-  type: NodePort
+  clusterIP: None
   ports:
-    - port: 10001
+    - port: 8080
       targetPort: 8080
-      name: controller
+      name: http
 ---
-apiVersion: v1
-kind: Route
+apiVersion: apps/v1beta1
+kind: StatefulSet
 metadata:
   name: controller
   labels:
     name: controller
 spec:
-  port:
-    targetPort: controller
-  to:
-    kind: Service
-    name: controller
-    weight: 100
-  wildcardPolicy: None
----
-apiVersion: v1
-kind: Route
-metadata:
-  name: controller-secured
-  labels:
-    name: controller
-spec:
-  port:
-    targetPort: controller
-  to:
-    kind: Service
-    name: controller
-    weight: 100
-  wildcardPolicy: None
-  tls:
-    termination: edge
+  replicas: 2
+  serviceName: "controller"
+  template:
+    metadata:
+      labels:
+        name: controller
+    spec:
+      restartPolicy: Always
+
+      containers:
+      - name: controller
+        imagePullPolicy: IfNotPresent
+        # Update this image to the publix OpenWhisk Image once this PR is merged.
+        # https://github.com/apache/incubator-openwhisk/pull/2452
+        image: projectodd/controller:openshift-latest
+        command: ["/bin/bash", "-c", "/controller/bin/controller `hostname | cut -d'-' -f2`"]
+        ports:
+        - name: controller
+          containerPort: 8080
+        livenessProbe:
+          httpGet:
+            path: "/ping"
+            port: 8080
+            scheme: "HTTP"
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 1
+        env:
+        - name: "PORT"
+          value: "8080"
+        - name: "COMPONENT_NAME"
+          value: "controller"
+        - name: "KAFKA_NUMPARTITIONS"
+          value: "2"
+        - name: "SERVICE_CHECK_HTTP"
+          value: "/ping"
+        - name: "SERVICE_CHECK_TIMEOUT"
+          value: "2s"
+        - name: "SERVICE_CHECK_INTERVAL"
+          value: "15s"
+
+        # Loadbalancer options
+        - name: "LOADBALANCER_INVOKERBUSYTHRESHOLD"
+          value: "16"
+
+        # obsolete but "required" options
+        - name: "CONSULSERVER_HOST"
+          value: "consul"
+        - name: "CONSUL_HOST_PORT4"
+          value: "8500"
+
+        # This needs to stay up to date with the lates runtime in Ansible Groupvars
+        - name: "RUNTIMES_MANIFEST"
+          value: '{ "defaultImagePrefix": "openwhisk", "defaultImageTag": "latest", "runtimes": { "nodejs": [ { "kind": "nodejs", "image": { "name": "nodejsaction" }, "deprecated": true }, { "kind": "nodejs:6", "default": true, "image": { "name": "nodejs6action" }, "deprecated": false } ], "python": [ { "kind": "python", "image": { "name": "python2action" }, "deprecated": false }, { "kind": "python:2", "default": true, "image": { "name": "python2action" }, "deprecated": false }, { "kind": "python:3", "image": { "name": "python3action" }, "deprecated": false } ], "swift": [ { "kind": "swift", "image": { "name": "swiftaction" }, "deprecated": true }, { "kind": "swift:3", "image": { "name": "swift3action" }, "deprecated": false }, { "kind": "swift:3.1.1", "default": true, "image": { "name": "action-swift-v3.1.1" }, "deprecated": false } ], "java": [ { "kind": "java", "default": true, "image": { "name": "java8action" }, "deprecated": false, "attached": { "attachmentName": "jarfile", "attachmentType": "application/java-archive" }, "sentinelledLogs": false, "requireMain": true } ] }, "blackboxes": [ { "name": "dockerskeleton" } ] }'
+
+        # this version is the day it is deployed and should be configured every time
+        - name:  "WHISK_VERSION_DATE"
+          value: "2017-01-01T00:00:00Z"
+        # the buildno should be the docker image tag to use
+        - name: "WHISK_VERSION_BUILDNO"
+          value: "latest"
+
+        # Java options
+        - name: "JAVA_OPTS"
+          value: "-Xmx2g"
+
+        # Kafka properties
+        - name: "KAFKA_HOST"
+          value: "kafka"
+        - name: "KAFKA_HOST_PORT"
+          value: "9092"
+
+        # specific controller arguments
+        - name: "CONTROLLER_OPTS"
+          value: ""
+        - name: "DEFAULTLIMITS_ACTIONS_INVOKES_PERMINUTE"
+          value: "120"
+        - name: "DEFAULTLIMITS_ACTIONS_INVOKES_CONCURRENT"
+          value: "100"
+        - name: "DEFAULTLIMITS_ACTIONS_INVOKES_CONCURRENTINSYSTEM"
+          value: "500"
+        - name: "DEFAULTLIMITS_ACTIONS_SEQUENCE_MAXLENGTH"
+          value: "50"
+        - name: "DEFAULTLIMITS_TRIGGERS_FIRES_PERMINUTE"
+          value: "60"
+
+        # properties for DB connection
+        - name: "DB_USERNAME"
+          value: "couch_user"
+        - name: "DB_PASSWORD"
+          value: "couch_password"
+        - name: "DB_PORT"
+          value: "5984"
+        - name:  "DB_PROTOCOL"
+          value: "http"
+        - name: "DB_HOST"
+          value: "couchdb"
+        - name: "DB_PROVIDER"
+          value: "CouchDB"
+        - name: "DB_WHISK_ACTIVATIONS"
+          value: "openwhisk_kube_activations"
+        - name: "DB_WHISK_ACTIONS"
+          value: "openwhisk_kube_whisks"
+        - name: "DB_WHISK_AUTHS"
+          value: "openwhisk_kube_subjects"
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -376,7 +425,7 @@ data:
     source /openwhisk_config/env
     export ORDINAL=$(hostname | cut -d'-' -f2)
     echo "Waiting for controller to be available"
-    until $(curl --output /dev/null --silent --head --fail http://${CONTROLLER_HOST}:${CONTROLLER_SERVICE_PORT}/ping); do printf '.'; sleep 1; done
+    until $(curl --output /dev/null --silent --head --fail http://${CONTROLLER_HOST}:${CONTROLLER_HOST_PORT}/ping); do printf '.'; sleep 1; done
     export COMPONENT_NAME=${ORDINAL}
     /invoker/bin/invoker ${ORDINAL}
   cleanup: |
@@ -390,7 +439,7 @@ metadata:
   labels:
     name: invoker
 spec:
-  replicas: 1
+  replicas: 4
   serviceName: "invoker"
   template:
     metadata:
@@ -420,6 +469,10 @@ spec:
             value: "2s"
           - name: "SERVICE_CHECK_INTERVAL"
             value: "15s"
+
+          # Invoker instance count. Needs to match replica count
+          - name: "INVOKER_INSTANCES"
+            value: "4"
         ports:
         - name: invoker
           containerPort: 8080
@@ -434,19 +487,160 @@ spec:
               command: [ "/bin/bash", "/invoker_config/cleanup" ]
 ---
 apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx
+data:
+  nginx.conf: |
+    events {
+        worker_connections  4096;
+    }
+
+    http {
+        client_max_body_size 50M;
+
+        rewrite_log on;
+        log_format combined-upstream '$remote_addr - $remote_user [$time_local] '
+            '$request $status $body_bytes_sent '
+            '$http_referer $http_user_agent $upstream_addr';
+        access_log /logs/nginx_access.log combined-upstream;
+
+        upstream controllers {
+            # These addresses are for the controller. If there are more
+            # than two invoker instances deployed then you will need to
+            # add additional controller addresses.
+
+            server controller-0.controller:8080 fail_timeout=60s;
+            server controller-1.controller:8080 backup;
+        }
+
+        server {
+            listen 8080 default;
+
+            # match namespace, note while OpenWhisk allows a richer character set for a
+            # namespace, not all those characters are permitted in the (sub)domain name;
+            # if namespace does not match, no vanity URL rewriting takes place.
+            server_name ~^(?<namespace>[0-9a-zA-Z-]+)\.localhost$;
+
+            # proxy to the web action path
+            location / {
+                if ($namespace) {
+                  rewrite    /(.*) /api/v1/web/${namespace}/$1 break;
+                }
+                proxy_pass http://controllers;
+                proxy_read_timeout 70s; # 60+10 additional seconds to allow controller to terminate request
+            }
+
+            # proxy to 'public/html' web action by convention
+            location = / {
+                if ($namespace) {
+                  rewrite    ^ /api/v1/web/${namespace}/public/index.html break;
+                }
+                proxy_pass http://controllers;
+                proxy_read_timeout 70s; # 60+10 additional seconds to allow controller to terminate request
+            }
+
+            location /blackbox-0.1.0.tar.gz {
+                root /etc/nginx;
+            }
+
+            location /OpenWhiskIOSStarterApp.zip {
+                return 301 https://github.com/openwhisk/openwhisk-client-swift/releases/download/0.2.3/starterapp-0.2.3.zip;
+            }
+
+            location /cli/go/download {
+                autoindex on;
+                root /etc/nginx;
+            }
+        }
+    }
+---
+apiVersion: v1
 kind: Service
 metadata:
-  name: invoker
+  name: nginx
   labels:
-    name: invoker
+    name: nginx
 spec:
+  type: NodePort
   selector:
-    name: invoker
-  clusterIP: None
+    name: nginx
   ports:
-    - port: 8080
+    - port: 80
       targetPort: 8080
-      name: invoker
+      name: http
+    - port: 8443
+      targetPort: 8443
+      name: https-admin
+
+---
+apiVersion: v1
+kind: Route
+metadata:
+  name: openwhisk
+  labels:
+    name: nginx
+spec:
+  port:
+    targetPort: http
+  to:
+    kind: Service
+    name: nginx
+    weight: 100
+  wildcardPolicy: None
+---
+apiVersion: v1
+kind: Route
+metadata:
+  name: openwhisk-secured
+  labels:
+    name: nginx
+spec:
+  port:
+    targetPort: http
+  to:
+    kind: Service
+    name: nginx
+    weight: 100
+  wildcardPolicy: None
+  tls:
+    termination: edge
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: nginx
+  labels:
+    name: nginx
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        name: nginx
+    spec:
+      restartPolicy: Always
+      volumes:
+      - name: nginx-conf
+        configMap:
+          name: nginx
+      - name: logs
+        emptyDir: {}
+      containers:
+      - name: nginx
+        imagePullPolicy: IfNotPresent
+        image: projectodd/whisk_nginx:openshift-latest
+        ports:
+        - name: http
+          containerPort: 8080
+        - name: https-admin
+          containerPort: 8443
+        volumeMounts:
+        - name: nginx-conf
+          mountPath: "/etc/nginx/nginx.conf"
+          subPath: "nginx.conf"
+        - name: logs
+          mountPath: "/logs"
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -461,7 +655,7 @@ data:
     export DB_PREFIX=whisk_alarms_
     export TOKEN="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)"
     export NAMESPACE=$(cat /run/secrets/kubernetes.io/serviceaccount/namespace)
-    export ROUTER_HOST=$(curl -s --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H "Authorization: Bearer ${TOKEN}" "https://${KUBERNETES_SERVICE_HOST}:${KUBERNETES_SERVICE_PORT}/oapi/v1/namespaces/${NAMESPACE}/routes/controller-secured?pretty=true" | grep '"host":' | head -n 1 | awk -F '"' '{print $4}')
+    export ROUTER_HOST=$(curl -s --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H "Authorization: Bearer ${TOKEN}" "https://${KUBERNETES_SERVICE_HOST}:${KUBERNETES_SERVICE_PORT}/oapi/v1/namespaces/${NAMESPACE}/routes/openwhisk-secured?pretty=true" | grep '"host":' | head -n 1 | awk -F '"' '{print $4}')
     export PORT=8080
     node /alarmsTrigger/app.js
 ---
