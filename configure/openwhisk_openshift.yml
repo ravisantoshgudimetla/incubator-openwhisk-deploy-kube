@@ -254,7 +254,7 @@ spec:
 
         # invoker topic settings
         - name: "INVOKER_COUNT"
-          value: "4"
+          value: "1"
         - name: "KAFKA_TOPICS_INVOKER_RETENTIONBYTES"
           value: "536870912"
         - name: "KAFKA_TOPICS_INVOKER_RETENTIONMS"
@@ -439,7 +439,7 @@ metadata:
   labels:
     name: invoker
 spec:
-  replicas: 4
+  replicas: 1
   serviceName: "invoker"
   template:
     metadata:
@@ -472,7 +472,7 @@ spec:
 
           # Invoker instance count. Needs to match replica count
           - name: "INVOKER_INSTANCES"
-            value: "4"
+            value: "1"
         ports:
         - name: invoker
           containerPort: 8080
