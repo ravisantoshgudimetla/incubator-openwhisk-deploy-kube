@@ -1,0 +1,61 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alarmprovider
+  namespace: openwhisk
+data:
+  env: |
+    set -x
+    source /openwhisk_config/env
+    DB_HOST="${DB_HOST}:${DB_PORT}"
+    DB_PREFIX="whisk_alarms_"
+    export TOKEN="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)"
+    export NAMESPACE="$(cat /run/secrets/kubernetes.io/serviceaccount/namespace)"
+    export ROUTER_HOST=$(curl -s --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H "Authorization: Bearer ${TOKEN}" "https://${KUBERNETES_SERVICE_HOST}:${KUBERNETES_SERVICE_PORT}/oapi/v1/namespaces/${NAMESPACE}/routes/openwhisk-secured?pretty=true" | grep '"host":' | head -n 1 | awk -F '"' '{print $4}')
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: alarmprovider
+  namespace: openwhisk
+  labels:
+    name: alarmprovider
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        name: alarmprovider
+      annotations:
+        pod.alpha.kubernetes.io/init-containers: '[
+            {
+                "name": "install-alarms-catalog",
+                "image": "projectodd/whisk_alarms:openshift-latest",
+                "imagePullPolicy": "IfNotPresent",
+                "volumeMounts": [
+                    {"name":"openwhisk-config",     "mountPath":"/openwhisk_config"},
+                    {"name":"alarmprovider-config", "mountPath":"/alarmprovider_config"}
+                ]
+            }
+        ]'
+    spec:
+      restartPolicy: Always
+      serviceAccountName: openwhisk
+      volumes:
+      - name: openwhisk-config
+        configMap:
+          name: openwhisk-config
+      - name: alarmprovider-config
+        configMap:
+          name: alarmprovider
+      containers:
+      - name: alarmprovider
+        imagePullPolicy: IfNotPresent
+        image: openwhisk/alarmprovider:1.1.7
+        command: [ "/bin/bash", "-o", "allexport", "-c", "source /alarmprovider_config/env; node /alarmsTrigger/app.js" ]
+        volumeMounts:
+        - name: openwhisk-config
+          mountPath: "/openwhisk_config"
+        - name: alarmprovider-config
+          mountPath: "/alarmprovider_config"

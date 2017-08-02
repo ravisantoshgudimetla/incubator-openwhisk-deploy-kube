@@ -49,7 +49,15 @@ wsk list
 wsk action invoke /whisk.system/utils/echo -p message hello -b
 ```
 
-If that's successful, try a more complex example involving triggers and rules:
+If that's successful, try a more complex example involving triggers
+and rules. First, install the alarms package:
+
+```
+oc create -f configure/alarms_openshift.yml
+```
+
+Once the `alarmprovider` pod enters the Running state, try the
+following:
 
 ```
 wsk trigger create every-5-seconds \

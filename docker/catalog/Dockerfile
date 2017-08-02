@@ -17,14 +17,6 @@ RUN git clone -b kube-container-openshift https://github.com/projectodd/incubato
 # Clone the default OpenWhisk catalog
 RUN git clone https://github.com/apache/incubator-openwhisk-catalog.git /openwhisk-catalog
 
-# Clone the alarm provider
-RUN git clone https://github.com/apache/incubator-openwhisk-package-alarms /openwhisk-package-alarms \
-  && cd /openwhisk-package-alarms \
-  && git checkout 1.1.7 \
-  && cd action \
-  && npm install \
-  && cd /
-
 ENV OPENWHISK_HOME /openwhisk
 
 # Install wsk binary
@@ -38,9 +30,7 @@ RUN chgrp -R 0 /openwhisk \
   && chmod -R g+rwX /openwhisk-catalog \
   && mkdir -p /.npm \
   && chgrp -R 0 /.npm \
-  && chmod -R g+rwX /.npm \
-  && chgrp -R 0 /openwhisk-package-alarms \
-  && chmod -R g+rwX /openwhisk-package-alarms
+  && chmod -R g+rwX /.npm
 
 COPY catalog-init.sh /init.sh
 COPY passwd.template /passwd.template
