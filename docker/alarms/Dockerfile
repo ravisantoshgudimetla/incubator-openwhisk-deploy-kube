@@ -21,8 +21,14 @@ RUN git clone https://github.com/apache/incubator-openwhisk-package-alarms /open
 RUN mkdir -p /openwhisk/bin
 RUN curl -L https://github.com/apache/incubator-openwhisk-cli/releases/download/latest/OpenWhisk_CLI-latest-linux-amd64.tgz | tar xz && mv wsk /openwhisk/bin/wsk
 
-ENV OPENWHISK_HOME /openwhisk
+# Ensure we can write to needed directories on OpenShift
+RUN chgrp -R 0 /openwhisk-package-alarms \
+  && chmod -R g+rwX /openwhisk-package-alarms \
+  && mkdir -p /.npm \
+  && chgrp -R 0 /.npm \
+  && chmod -R g+rwX /.npm
 
+ENV OPENWHISK_HOME /openwhisk
 COPY alarms-init.sh /init.sh
 
 ENTRYPOINT ["/bin/bash", "/init.sh"]
