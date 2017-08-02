@@ -82,6 +82,7 @@ docker build --tag projectodd/whisk_zookeeper:openshift-latest docker/zookeeper
 docker build --tag projectodd/whisk_kafka:openshift-latest docker/kafka
 docker build --tag projectodd/whisk_nginx:openshift-latest docker/nginx
 docker build --tag projectodd/whisk_catalog:openshift-latest docker/catalog
+docker build --tag projectodd/whisk_alarms:openshift-latest docker/alarms
 ```
 
 ## Public Docker Images

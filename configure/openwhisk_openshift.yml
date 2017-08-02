@@ -288,21 +288,6 @@ spec:
       targetPort: 9092
       name: kafka
 ---
-apiVersion: v1
-kind: Service
-metadata:
-  name: controller
-  labels:
-    name: controller
-spec:
-  selector:
-    name: controller
-  clusterIP: None
-  ports:
-    - port: 8080
-      targetPort: 8080
-      name: http
----
 apiVersion: apps/v1beta1
 kind: StatefulSet
 metadata:
@@ -415,6 +400,21 @@ spec:
           value: "openwhisk_kube_whisks"
         - name: "DB_WHISK_AUTHS"
           value: "openwhisk_kube_subjects"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: controller
+  labels:
+    name: controller
+spec:
+  selector:
+    name: controller
+  clusterIP: None
+  ports:
+    - port: 8080
+      targetPort: 8080
+      name: http
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -555,57 +555,6 @@ data:
         }
     }
 ---
-apiVersion: v1
-kind: Service
-metadata:
-  name: nginx
-  labels:
-    name: nginx
-spec:
-  type: NodePort
-  selector:
-    name: nginx
-  ports:
-    - port: 80
-      targetPort: 8080
-      name: http
-    - port: 8443
-      targetPort: 8443
-      name: https-admin
-
----
-apiVersion: v1
-kind: Route
-metadata:
-  name: openwhisk
-  labels:
-    name: nginx
-spec:
-  port:
-    targetPort: http
-  to:
-    kind: Service
-    name: nginx
-    weight: 100
-  wildcardPolicy: None
----
-apiVersion: v1
-kind: Route
-metadata:
-  name: openwhisk-secured
-  labels:
-    name: nginx
-spec:
-  port:
-    targetPort: http
-  to:
-    kind: Service
-    name: nginx
-    weight: 100
-  wildcardPolicy: None
-  tls:
-    termination: edge
----
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
@@ -641,6 +590,56 @@ spec:
           subPath: "nginx.conf"
         - name: logs
           mountPath: "/logs"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+  labels:
+    name: nginx
+spec:
+  type: NodePort
+  selector:
+    name: nginx
+  ports:
+    - port: 80
+      targetPort: 8080
+      name: http
+    - port: 8443
+      targetPort: 8443
+      name: https-admin
+---
+apiVersion: v1
+kind: Route
+metadata:
+  name: openwhisk
+  labels:
+    name: nginx
+spec:
+  port:
+    targetPort: http
+  to:
+    kind: Service
+    name: nginx
+    weight: 100
+  wildcardPolicy: None
+---
+apiVersion: v1
+kind: Route
+metadata:
+  name: openwhisk-secured
+  labels:
+    name: nginx
+spec:
+  port:
+    targetPort: http
+  to:
+    kind: Service
+    name: nginx
+    weight: 100
+  wildcardPolicy: None
+  tls:
+    termination: edge
 ---
 apiVersion: batch/v1
 kind: Job

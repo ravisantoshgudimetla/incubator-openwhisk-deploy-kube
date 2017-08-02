@@ -277,36 +277,6 @@ spec:
       targetPort: 9092
       name: kafka
 ---
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: controller
-  namespace: openwhisk
-data:
-  controller.opts: ""
-  java.opts: -Xmx2g
-  init: |
-    source /openwhisk_config/env
-    echo "Waiting for couchdb to be available"
-    until $(curl --output /dev/null --silent --head --fail http://${DB_HOST}:${DB_PORT}/_all_dbs); do printf '.'; sleep 1; done
-    /controller/bin/controller
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: controller
-  namespace: openwhisk
-  labels:
-    name: controller
-spec:
-  selector:
-    name: controller
-  clusterIP: None
-  ports:
-    - port: 8080
-      targetPort: 8080
-      name: http
----
 apiVersion: apps/v1beta1
 kind: StatefulSet
 metadata:
@@ -422,6 +392,22 @@ spec:
           value: "openwhisk_kube_subjects"
 ---
 apiVersion: v1
+kind: Service
+metadata:
+  name: controller
+  namespace: openwhisk
+  labels:
+    name: controller
+spec:
+  selector:
+    name: controller
+  clusterIP: None
+  ports:
+    - port: 8080
+      targetPort: 8080
+      name: http
+---
+apiVersion: v1
 kind: ConfigMap
 metadata:
   name: invoker
@@ -520,29 +506,6 @@ spec:
             exec:
               command: [ "/bin/bash", "/invoker_config/cleanup" ]
 ---
-apiVersion: v1
-kind: Service
-metadata:
-  name: nginx
-  namespace: openwhisk
-  labels:
-    name: nginx
-spec:
-  type: NodePort
-  selector:
-    name: nginx
-  ports:
-    - port: 80
-      targetPort: 80
-      name: http
-    - port: 443
-      targetPort: 443
-      name: https-api
-    - port: 8443
-      targetPort: 8443
-      name: https-admin
-
----
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
@@ -586,6 +549,28 @@ spec:
           mountPath: "/etc/nginx/certs"
         - name: logs
           mountPath: "/logs"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+  namespace: openwhisk
+  labels:
+    name: nginx
+spec:
+  type: NodePort
+  selector:
+    name: nginx
+  ports:
+    - port: 80
+      targetPort: 80
+      name: http
+    - port: 443
+      targetPort: 443
+      name: https-api
+    - port: 8443
+      targetPort: 8443
+      name: https-admin
 ---
 apiVersion: batch/v1
 kind: Job
