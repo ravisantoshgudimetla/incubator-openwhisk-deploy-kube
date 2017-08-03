@@ -4,29 +4,4 @@
 
 set -x
 
-# delete jobs
-kubectl -n openwhisk delete job preload-openwhisk-runtimes
-kubectl -n openwhisk delete job install-openwhisk-catalog
-
-# delete deployments
-kubectl -n openwhisk delete deployment couchdb
-kubectl -n openwhisk delete deployment zookeeper
-kubectl -n openwhisk delete deployment kafka
-kubectl -n openwhisk delete deployment nginx
-kubectl -n openwhisk delete statefulsets controller
-kubectl -n openwhisk delete statefulsets invoker
-
-# delete configmaps
-kubectl -n openwhisk delete cm invoker
-kubectl -n openwhisk delete cm openwhisk-config
-kubectl -n openwhisk delete cm nginx
-
-# delete secrets
-kubectl -n openwhisk delete secret nginx
-
-# delete services
-kubectl -n openwhisk delete service couchdb
-kubectl -n openwhisk delete service zookeeper
-kubectl -n openwhisk delete service kafka
-kubectl -n openwhisk delete service controller
-kubectl -n openwhisk delete service nginx
+kubectl delete namespace openwhisk

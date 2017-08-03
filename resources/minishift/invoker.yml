@@ -1,0 +1,107 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: invoker
+data:
+  init: |
+    source /openwhisk_config/env
+    export ORDINAL=$(hostname | cut -d'-' -f2)
+    echo "Waiting for controller to be available"
+    until $(curl --output /dev/null --silent --head --fail http://${CONTROLLER_HOST}:${CONTROLLER_HOST_PORT}/ping); do printf '.'; sleep 1; done
+    export COMPONENT_NAME=${ORDINAL}
+    /invoker/bin/invoker ${ORDINAL}
+  cleanup: |
+    export ORDINAL=$(hostname | cut -d'-' -f2)
+    kubectl delete pod -l invoker=invoker${ORDINAL}
+---
+apiVersion: apps/v1beta1
+kind: StatefulSet
+metadata:
+  name: invoker
+  labels:
+    name: invoker
+spec:
+  replicas: 1
+  serviceName: "invoker"
+  template:
+    metadata:
+      labels:
+        name: invoker
+    spec:
+      restartPolicy: Always
+      volumes:
+      - name: openwhisk-config
+        configMap:
+          name: openwhisk-config
+      - name: invoker-config
+        configMap:
+          name: invoker
+      serviceAccountName: openwhisk
+      containers:
+      - name: invoker
+        imagePullPolicy: IfNotPresent
+        image: projectodd/invoker:openshift-latest
+        command: [ "/bin/bash", "-o", "allexport", "/invoker_config/init" ]
+        env:
+          - name: "PORT"
+            value: "8080"
+          - name: "SERVICE_CHECK_HTTP"
+            value: "/ping"
+          - name: "SERVICE_CHECK_TIMEOUT"
+            value: "2s"
+          - name: "SERVICE_CHECK_INTERVAL"
+            value: "15s"
+
+          # Invoker instance count. Needs to match replica count
+          - name: "INVOKER_INSTANCES"
+            value: "1"
+        ports:
+        - name: invoker
+          containerPort: 8080
+        volumeMounts:
+        - name: openwhisk-config
+          mountPath: "/openwhisk_config"
+        - name: invoker-config
+          mountPath: "/invoker_config"
+        lifecycle:
+          preStop:
+            exec:
+              command: [ "/bin/bash", "/invoker_config/cleanup" ]
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: preload-openwhisk-runtimes
+  labels:
+    name: preload-openwhisk-runtimes
+spec:
+  completions: 1
+  serviceAccountName: openwhisk
+  template:
+    metadata:
+      labels:
+        name: preload-openwhisk-runtimes
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: preload-openwhisk-nodejs6
+        image: projectodd/nodejs6action:openshift-latest
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/sh", "-c", "echo", "success"]
+      - name: preload-openwhisk-python2
+        image: projectodd/python2action:openshift-latest
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/sh", "-c", "echo", "success"]
+      - name: preload-openwhisk-python3
+        image: projectodd/python3action:openshift-latest
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/sh", "-c", "echo", "success"]
+      - name: preload-openwhisk-swift3
+        image: projectodd/swift3action:openshift-latest
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/sh", "-c", "echo", "success"]
+      - name: preload-openwhisk-java8
+        image: projectodd/java8action:openshift-latest
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/sh", "-c", "echo", "success"]
