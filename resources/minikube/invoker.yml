@@ -28,21 +28,6 @@ spec:
     spec:
       restartPolicy: Always
       volumes:
-      - name: cgroup
-        hostPath:
-          path: "/sys/fs/cgroup"
-      - name: runc
-        hostPath:
-          path: "/run/runc"
-      - name: dockerrootdir
-        hostPath:
-          path: "/var/lib/docker/containers"
-      - name: dockersock
-        hostPath:
-          path: "/var/run/docker.sock"
-      - name: apparmor
-        hostPath:
-          path: "/usr/lib/x86_64-linux-gnu/libapparmor.so.1"
       - name: openwhisk-config
         configMap:
           name: openwhisk-config
@@ -63,8 +48,6 @@ spec:
             value: "2s"
           - name: "SERVICE_CHECK_INTERVAL"
             value: "15s"
-          - name: "DOCKER_API_VERSION"
-            value: "1.23"
 
           # Invoker instance count. Needs to match replica count
           - name: "INVOKER_INSTANCES"
@@ -74,16 +57,6 @@ spec:
         - name: invoker
           containerPort: 8080
         volumeMounts:
-        - name: cgroup
-          mountPath: "/sys/fs/cgroup"
-        - name: runc
-          mountPath: "/run/runc"
-        - name: dockersock
-          mountPath: "/var/run/docker.sock"
-        - name: dockerrootdir
-          mountPath: "/containers"
-        - name: apparmor
-          mountPath: "/usr/lib/x86_64-linux-gnu/libapparmor.so.1"
         - name: openwhisk-config
           mountPath: "/openwhisk_config"
         - name: invoker-config
