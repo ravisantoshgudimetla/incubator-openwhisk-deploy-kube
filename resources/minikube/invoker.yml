@@ -10,10 +10,7 @@ data:
     echo "Waiting for controller to be available"
     until $(curl --output /dev/null --silent --head --fail http://${CONTROLLER_HOST}:${CONTROLLER_HOST_PORT}/ping); do printf '.'; sleep 1; done
     export COMPONENT_NAME=${ORDINAL}
-    /invoker/bin/invoker ${ORDINAL}
-  cleanup: |
-    export ORDINAL=$(hostname | cut -d'-' -f2)
-    kubectl delete pod -l invoker=invoker${ORDINAL}
+    exec /invoker/bin/invoker ${ORDINAL}
 ---
 apiVersion: apps/v1beta1
 kind: StatefulSet
@@ -91,10 +88,6 @@ spec:
           mountPath: "/openwhisk_config"
         - name: invoker-config
           mountPath: "/invoker_config"
-        lifecycle:
-          preStop:
-            exec:
-              command: [ "/bin/bash", "/invoker_config/cleanup" ]
 ---
 apiVersion: batch/v1
 kind: Job

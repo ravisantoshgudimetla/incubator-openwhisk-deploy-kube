@@ -73,7 +73,7 @@ wsk -i rule create \
 wsk -i activation poll
 ```
 
-You can delete the entire OpenWhisk platform by deleting its
+You can delete all of the OpenWhisk resources by deleting its
 namespace:
 
 ```
