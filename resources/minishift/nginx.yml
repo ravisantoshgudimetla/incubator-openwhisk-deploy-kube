@@ -31,23 +31,9 @@ spec:
     name: nginx
     weight: 100
   wildcardPolicy: None
----
-apiVersion: v1
-kind: Route
-metadata:
-  name: openwhisk-secured
-  labels:
-    name: nginx
-spec:
-  port:
-    targetPort: http
-  to:
-    kind: Service
-    name: nginx
-    weight: 100
-  wildcardPolicy: None
   tls:
     termination: edge
+    insecureEdgeTerminationPolicy: Redirect
 ---
 apiVersion: v1
 kind: ConfigMap

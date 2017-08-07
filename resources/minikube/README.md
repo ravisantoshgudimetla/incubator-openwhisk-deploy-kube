@@ -42,7 +42,7 @@ https://github.com/apache/incubator-openwhisk-cli/releases/), then:
 ```
 export AUTH_SECRET=$(kubectl -n openwhisk get configmap openwhisk-config -o yaml | grep 'AUTH_WHISK_SYSTEM=' | awk -F '=' '{print $2}')
 export WSK_PORT=$(kubectl -n openwhisk describe service nginx | grep https-api | grep NodePort| awk '{print $3}' | cut -d'/' -f1)
-wsk property set --auth $AUTH_SECRET --apihost https://$(minikube ip):$WSK_PORT
+wsk property set --auth $AUTH_SECRET --apihost $(minikube ip):$WSK_PORT
 wsk -i list
 wsk -i action invoke /whisk.system/utils/echo -p message hello -b
 ```

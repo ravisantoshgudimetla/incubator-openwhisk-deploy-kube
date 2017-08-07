@@ -42,9 +42,9 @@ https://github.com/apache/incubator-openwhisk-cli/releases/), then:
 
 ```
 export AUTH_SECRET=$(oc get configmap openwhisk-config -o yaml | grep 'AUTH_WHISK_SYSTEM=' | awk -F '=' '{print $2}')
-wsk property set --auth $AUTH_SECRET --apihost http://$(oc get route/openwhisk --template={{.spec.host}})
-wsk list
-wsk action invoke /whisk.system/utils/echo -p message hello -b
+wsk property set --auth $AUTH_SECRET --apihost $(oc get route/openwhisk --template={{.spec.host}})
+wsk -i list
+wsk -i action invoke /whisk.system/utils/echo -p message hello -b
 ```
 
 If that's successful, try a more complex example involving triggers
@@ -58,16 +58,16 @@ Once the `alarmprovider` pod enters the Running state, try the
 following:
 
 ```
-wsk trigger create every-5-seconds \
+wsk -i trigger create every-5-seconds \
     --feed  /whisk.system/alarms/alarm \
     --param cron '*/5 * * * * *' \
     --param maxTriggers 25 \
     --param trigger_payload "{\"name\":\"Odin\",\"place\":\"Asgard\"}"
-wsk rule create \
+wsk -i rule create \
     invoke-periodically \
     every-5-seconds \
     /whisk.system/samples/greeting
-wsk activation poll
+wsk -i activation poll
 ```
 
 You can delete all the OpenWhisk resources like so:
