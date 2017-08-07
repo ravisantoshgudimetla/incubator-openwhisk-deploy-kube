@@ -10,6 +10,11 @@ data:
     echo "Waiting for controller to be available"
     until $(curl --output /dev/null --silent --head --fail http://${CONTROLLER_HOST}:${CONTROLLER_HOST_PORT}/ping); do printf '.'; sleep 1; done
     export COMPONENT_NAME=${ORDINAL}
+    export TOKEN="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)"
+    export NAMESPACE="$(cat /run/secrets/kubernetes.io/serviceaccount/namespace)"
+    export APIGW_HOST=$(curl -s --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H "Authorization: Bearer ${TOKEN}" "https://${KUBERNETES_SERVICE_HOST}:${KUBERNETES_SERVICE_PORT}/oapi/v1/namespaces/${NAMESPACE}/routes/openwhisk?pretty=true" | grep '"host":' | head -n 1 | awk -F '"' '{print $4}')
+    export APIGW_HOST_V2=${APIGW_HOST}
+    export WHISK_API_HOST_NAME=${APIGW_HOST}
     exec /invoker/bin/invoker ${ORDINAL}
 ---
 apiVersion: apps/v1beta1
