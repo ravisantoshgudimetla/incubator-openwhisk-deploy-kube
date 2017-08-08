@@ -78,5 +78,5 @@ to install Kubeadm for Kube version 1.5.
 
 [Minikube](https://github.com/kubernetes/minikube) support is
 experimental, see the
-[Minikube-specific install instructions](/minikube/README.md) for more
+[Minikube-specific install instructions](/resources/minikube/README.md) for more
 details.

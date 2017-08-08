@@ -1,5 +1,8 @@
 # Deploying OpenWhisk to Minikube
 
+These instructions have been tested successfully with minikube version
+0.21.0. Later releases should also work. Earlier ones might not.
+
 First, start minikube and fix a networking bug in current releases:
 
 ```

@@ -57,7 +57,7 @@ take a look at these [instructions](/docs/setting_up_kube/README.md).
 
 We also have experimental support for
 [Minikube](https://github.com/kubernetes/minikube), see the
-[Minikube-specific install instructions](/minikube/README.md) for more details.
+[Minikube-specific install instructions](/resources/minikube/README.md) for more details.
 
 # Configure OpenWhisk
 
@@ -275,7 +275,7 @@ is no CI to test it against at the moment.
 **Minikube (experimental)**
 We also have experimental support for
 * [Minikube](https://github.com/kubernetes/minikube), see the
-* [Minikube-specific install instructions](/minikube/README.md) for more details.
+* [Minikube-specific install instructions](/resources/minikube/README.md) for more details.
 
 **Bad Kube versions**
 * Kube 1.6.3 has an issue with volume mount subpaths. See
