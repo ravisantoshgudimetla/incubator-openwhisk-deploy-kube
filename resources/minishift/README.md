@@ -70,8 +70,8 @@ wsk -i rule create \
 wsk -i activation poll
 ```
 
-You can delete all the OpenWhisk resources like so:
+You can delete all the OpenWhisk resources by deleting the project:
 
 ```
-oc delete -f . -R
+oc delete project openwhisk
 ```

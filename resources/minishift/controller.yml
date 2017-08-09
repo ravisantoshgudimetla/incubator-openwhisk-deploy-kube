@@ -53,6 +53,11 @@ spec:
           value: "8080"
         - name: "COMPONENT_NAME"
           value: "controller"
+
+        # Controller instance count. Needs to match replica count
+        - name: "CONTROLLER_INSTANCES"
+          value: "2"
+
         - name: "KAFKA_NUMPARTITIONS"
           value: "2"
         - name: "SERVICE_CHECK_HTTP"

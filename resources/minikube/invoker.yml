@@ -10,6 +10,7 @@ data:
     echo "Waiting for controller to be available"
     until $(curl --output /dev/null --silent --head --fail http://${CONTROLLER_HOST}:${CONTROLLER_HOST_PORT}/ping); do printf '.'; sleep 1; done
     export COMPONENT_NAME=${ORDINAL}
+    INVOKER_OPTS="-Dwhisk.spi.ContainerProvider=whisk.core.containerpool.kubernetes.KubernetesContainerProvider"
     exec /invoker/bin/invoker ${ORDINAL}
 ---
 apiVersion: apps/v1beta1
