@@ -9,17 +9,19 @@ RUN apt-get -y update && \
       python-pip \
       python-dev \
       libffi-dev \
+      libssl-dev \
       libuid-wrapper
 
 
-# Workaround a bug in cffi and Debian Jesse that gets hit in ansible.sh
+# Workaround a bug in cffi and Debian Jesse that gets hit in ansible
 RUN pip install --upgrade cffi
+
+RUN pip install ansible==2.3.0.0
 
 RUN git clone -b kube-container-openshift https://github.com/projectodd/incubator-openwhisk /openwhisk \
   && cd /openwhisk \
   && git checkout 21da7e5 \
   && cd /
-RUN /openwhisk/tools/ubuntu-setup/ansible.sh
 
 COPY couchdb-settings.ini /usr/local/etc/couchdb/local.d/whisk.ini
 RUN chown couchdb:couchdb /usr/local/etc/couchdb/local.d/whisk.ini
