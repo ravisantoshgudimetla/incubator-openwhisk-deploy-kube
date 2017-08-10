@@ -15,7 +15,10 @@ RUN apt-get -y update && \
 # Workaround a bug in cffi and Debian Jesse that gets hit in ansible.sh
 RUN pip install --upgrade cffi
 
-RUN git clone https://github.com/openwhisk/openwhisk /openwhisk
+RUN git clone -b kube-container-openshift https://github.com/projectodd/incubator-openwhisk /openwhisk \
+  && cd /openwhisk \
+  && git checkout 21da7e5 \
+  && cd /
 RUN /openwhisk/tools/ubuntu-setup/ansible.sh
 
 COPY couchdb-settings.ini /usr/local/etc/couchdb/local.d/whisk.ini

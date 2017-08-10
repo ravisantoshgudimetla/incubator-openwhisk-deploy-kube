@@ -12,10 +12,16 @@ RUN yum update -y \
   && yum clean all
 
 # Clone our branch of OpenWhisk
-RUN git clone -b kube-container-openshift https://github.com/projectodd/incubator-openwhisk /openwhisk
+RUN git clone -b kube-container-openshift https://github.com/projectodd/incubator-openwhisk /openwhisk \
+  && cd /openwhisk \
+  && git checkout 21da7e5 \
+  && cd /
 
 # Clone the default OpenWhisk catalog
-RUN git clone https://github.com/apache/incubator-openwhisk-catalog.git /openwhisk-catalog
+RUN git clone https://github.com/apache/incubator-openwhisk-catalog.git /openwhisk-catalog \
+  && cd /openwhisk-catalog \
+  && git checkout c8a1968 \
+  && cd /
 
 ENV OPENWHISK_HOME /openwhisk
 
