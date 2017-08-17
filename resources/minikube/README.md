@@ -50,11 +50,20 @@ wsk -i list
 wsk -i action invoke /whisk.system/utils/echo -p message hello -b
 ```
 
-Without the `-i` option, you will get certificate validation error due
-to the self-signed cert the nginx service is using.
+Without the `-i` option, you will get a certificate validation error
+due to the self-signed cert the nginx service is using.
 
-If that's successful, try a more complex example involving triggers
-and rules. First, install the alarms package:
+If the `wsk` command seems to hang, cancel it and try bouncing the
+nginx pod, since its IP addresses for any restarted controllers may be
+stale:
+
+```
+kubectl -n openwhisk delete pod -l name=nginx
+```
+
+If that enables the above `wsk` commands to succeed, try a more
+complex example involving triggers and rules. First, install the
+alarms package:
 
 ```
 kubectl -n openwhisk create -f packages/alarms.yml

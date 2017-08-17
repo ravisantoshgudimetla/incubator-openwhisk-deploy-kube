@@ -47,6 +47,17 @@ wsk -i list
 wsk -i action invoke /whisk.system/utils/echo -p message hello -b
 ```
 
+Without the `-i` option, you will get a certificate validation error
+due to the self-signed cert the nginx service is using.
+
+If the `wsk` command seems to hang, cancel it and try bouncing the
+nginx pod, since its IP addresses for any restarted controllers may be
+stale:
+
+```
+oc delete pod -l name=nginx
+```
+
 If that's successful, try a more complex example involving triggers
 and rules. First, install the alarms package:
 
