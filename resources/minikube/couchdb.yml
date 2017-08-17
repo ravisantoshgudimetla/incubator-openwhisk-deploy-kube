@@ -40,6 +40,17 @@ spec:
         ports:
         - name: couchdb
           containerPort: 5984
+        env:
+        - name: "DB_USERNAME"
+          valueFrom:
+            secretKeyRef:
+              name: "couchdb"
+              key: "username"
+        - name: "DB_PASSWORD"
+          valueFrom:
+            secretKeyRef:
+              name: "couchdb"
+              key: "password"
         volumeMounts:
           - name: openwhisk-config
             mountPath: "/openwhisk_config"

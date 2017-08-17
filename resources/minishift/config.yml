@@ -65,8 +65,6 @@ data:
     DB_PROVIDER=CouchDB
     DB_PORT=5984
     DB_PROTOCOL=http
-    DB_USERNAME=couch_user
-    DB_PASSWORD=couch_password
     DB_AUTH="subjects"
     DB_PREFIX="openwhisk_kube_"
     DB_SPLIT_ACTIONS_AND_ACTIVATIONS=true
@@ -91,3 +89,12 @@ data:
 
     CATALOG_NAMESPACE="/whisk.system"
     CATALOG_AUTH_KEY="/openwhisk/ansible/files/auth.whisk.system"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: couchdb
+type: Opaque
+data:
+  password: Y291Y2hfcGFzc3dvcmQ=
+  username: Y291Y2hfdXNlcm5hbWU=

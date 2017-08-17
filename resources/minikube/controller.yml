@@ -113,10 +113,6 @@ spec:
           value: "60"
 
         # properties for DB connection
-        - name: "DB_USERNAME"
-          value: "couch_user"
-        - name: "DB_PASSWORD"
-          value: "couch_password"
         - name: "DB_PORT"
           value: "5984"
         - name:  "DB_PROTOCOL"
@@ -131,6 +127,18 @@ spec:
           value: "openwhisk_kube_whisks"
         - name: "DB_WHISK_AUTHS"
           value: "openwhisk_kube_subjects"
+
+        # Database credentials
+        - name: "DB_USERNAME"
+          valueFrom:
+            secretKeyRef:
+              name: "couchdb"
+              key: "username"
+        - name: "DB_PASSWORD"
+          valueFrom:
+            secretKeyRef:
+              name: "couchdb"
+              key: "password"
 ---
 apiVersion: batch/v1
 kind: Job

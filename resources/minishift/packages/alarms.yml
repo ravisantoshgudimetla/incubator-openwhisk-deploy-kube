@@ -52,6 +52,17 @@ spec:
         imagePullPolicy: IfNotPresent
         image: openwhisk/alarmprovider:1.1.7
         command: [ "/bin/bash", "-o", "allexport", "-c", "source /alarmprovider_config/env; node /alarmsTrigger/app.js" ]
+        env:
+        - name: "DB_USERNAME"
+          valueFrom:
+            secretKeyRef:
+              name: "couchdb"
+              key: "username"
+        - name: "DB_PASSWORD"
+          valueFrom:
+            secretKeyRef:
+              name: "couchdb"
+              key: "password"
         volumeMounts:
         - name: openwhisk-config
           mountPath: "/openwhisk_config"

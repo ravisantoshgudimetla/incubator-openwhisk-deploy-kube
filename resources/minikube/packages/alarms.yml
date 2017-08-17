@@ -7,8 +7,6 @@ data:
   PORT: "8080"
   DB_HOST: "couchdb:5984"
   DB_PROTOCOL: "http"
-  DB_USERNAME: "couch_user"
-  DB_PASSWORD: "couch_password"
   DB_PREFIX: "whisk_alarms_"
   ROUTER_HOST: "nginx"
   CONTROLLER_HOST: "controller-0.controller"
@@ -37,6 +35,17 @@ spec:
         envFrom:
         - configMapRef:
             name: alarmprovider
+        env:
+        - name: "DB_USERNAME"
+          valueFrom:
+            secretKeyRef:
+              name: "couchdb"
+              key: "username"
+        - name: "DB_PASSWORD"
+          valueFrom:
+            secretKeyRef:
+              name: "couchdb"
+              key: "password"
       initContainers:
       - name: install-alarms-catalog
         imagePullPolicy: IfNotPresent
