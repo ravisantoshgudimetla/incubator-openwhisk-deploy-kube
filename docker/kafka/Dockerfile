@@ -8,5 +8,6 @@ RUN chgrp -R 0 /kafka \
 USER kafka
 
 COPY init.sh /init.sh
+COPY server.properties.template /kafka/config/server.properties.template
 
 ENTRYPOINT ["/bin/bash", "/init.sh"]
