@@ -2,13 +2,13 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: zookeeper
+  name: zookeeper-headless
   namespace: openwhisk
   labels:
-    name: zookeeper
+    app: zookeeper-headless
 spec:
   selector:
-    name: zookeeper
+    app: zookeeper
   ports:
     - port: 2181
       targetPort: 2181
@@ -50,15 +50,13 @@ kind: StatefulSet
 metadata:
   name: zookeeper
   namespace: openwhisk
-  labels:
-    name: zookeeper
 spec:
-  serviceName: zookeeper
+  serviceName: zookeeper-headless
   replicas: 3
   template:
     metadata:
       labels:
-        name: zookeeper
+        app: zookeeper
       annotations:
         pod.alpha.kubernetes.io/initialized: "true"
       
@@ -71,7 +69,7 @@ spec:
                   - key: "app"
                     operator: In
                     values: 
-                    - zookeeper
+                    - zookeeper-headless
               topologyKey: "kubernetes.io/hostname"
       containers:
       - name: zookeeper
