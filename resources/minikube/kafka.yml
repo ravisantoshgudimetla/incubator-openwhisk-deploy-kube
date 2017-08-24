@@ -27,7 +27,11 @@ spec:
         name: kafka
     spec:
       restartPolicy: Always
-
+      volumes:
+      - name: kafka-logs
+        emptyDir: {}
+      - name: kafka-java-logs
+        emptyDir: {}
       containers:
       - name: kafka
         imagePullPolicy: IfNotPresent
@@ -37,7 +41,7 @@ spec:
           containerPort: 9092
         env:
         - name: "KAFKA_ADVERTISED_HOST_NAME"
-          value: kafka.openwhisk
+          value: kafka
         - name: "KAFKA_PORT"
           value: "9092"
 
@@ -77,6 +81,11 @@ spec:
 
         # zookeeper info
         - name: "ZOOKEEPER_HOST"
-          value: "zookeeper.openwhisk"
+          value: "zookeeper"
         - name: "ZOOKEEPER_PORT"
           value: "2181"
+        volumeMounts:
+          - name: kafka-logs
+            mountPath: "/data"
+          - name: kafka-java-logs
+            mountPath: "/logs"
