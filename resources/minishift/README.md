@@ -34,14 +34,12 @@ You can get the url for the service with:
 oc get route/openwhisk --template={{.spec.host}}
 ```
 
-TODO: use secrets for auth, not the configmap
-
 To test the system, first make sure you have a `wsk` binary in your
 $PATH (download from
 https://github.com/apache/incubator-openwhisk-cli/releases/), then:
 
 ```
-export AUTH_SECRET=$(oc get configmap openwhisk-config -o yaml | grep 'AUTH_WHISK_SYSTEM=' | awk -F '=' '{print $2}')
+export AUTH_SECRET=$(oc get secret openwhisk -o yaml | grep "system:" | awk '{print $2}' | base64 -d)
 wsk property set --auth $AUTH_SECRET --apihost $(oc get route/openwhisk --template={{.spec.host}})
 wsk -i list
 wsk -i action invoke /whisk.system/utils/echo -p message hello -b

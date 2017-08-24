@@ -73,7 +73,7 @@ spec:
 
         # obsolete but "required" options
         - name: "CONSULSERVER_HOST"
-          value: "consul.openwhisk"
+          value: "consul"
         - name: "CONSUL_HOST_PORT4"
           value: "8500"
 
@@ -94,7 +94,7 @@ spec:
 
         # Kafka properties
         - name: "KAFKA_HOST"
-          value: "kafka.openwhisk"
+          value: "kafka"
         - name: "KAFKA_HOST_PORT"
           value: "9092"
 
@@ -118,7 +118,7 @@ spec:
         - name:  "DB_PROTOCOL"
           value: "http"
         - name: "DB_HOST"
-          value: "couchdb.openwhisk"
+          value: "couchdb"
         - name: "DB_PROVIDER"
           value: "CouchDB"
         - name: "DB_WHISK_ACTIVATIONS"
@@ -162,6 +162,12 @@ spec:
       - name: install-openwhisk-catalog
         image: projectodd/whisk_catalog:openshift-latest
         imagePullPolicy: IfNotPresent
+        env:
+        - name: "AUTH_WHISK_SYSTEM"
+          valueFrom:
+            secretKeyRef:
+              name: "openwhisk"
+              key: "system"
         volumeMounts:
         - name: openwhisk-config
           mountPath: "/openwhisk_config"

@@ -31,6 +31,11 @@ spec:
                 "name": "install-alarms-catalog",
                 "image": "projectodd/whisk_alarms:openshift-latest",
                 "imagePullPolicy": "IfNotPresent",
+                "env": [
+                    {"name":"AUTH_WHISK_SYSTEM",
+                     "valueFrom": { "secretKeyRef": { "name":"openwhisk", "key":"system" } }
+                    }
+                ],
                 "volumeMounts": [
                     {"name":"openwhisk-config",     "mountPath":"/openwhisk_config"},
                     {"name":"alarmprovider-config", "mountPath":"/alarmprovider_config"}

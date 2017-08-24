@@ -52,6 +52,17 @@ spec:
             secretKeyRef:
               name: "couchdb"
               key: "password"
+        # Authentication tokens
+        - name: "AUTH_WHISK_SYSTEM"
+          valueFrom:
+            secretKeyRef:
+              name: "openwhisk"
+              key: "system"
+        - name: "AUTH_GUEST"
+          valueFrom:
+            secretKeyRef:
+              name: "openwhisk"
+              key: "guest"
         volumeMounts:
           - name: openwhisk-config
             mountPath: "/openwhisk_config"
