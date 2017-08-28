@@ -89,3 +89,39 @@ namespace:
 ```
 kubectl delete ns openwhisk
 ```
+
+## Sensitive Data
+
+Authentication credentials are stored in Kubernetes
+[secrets](https://kubernetes.io/docs/concepts/configuration/secret/),
+by default in the [insecure-secrets.yml](insecure-secrets.yml)
+resource in this directory. This is convenient for development, but at
+some point you'll want to create your own credentials.
+
+The username and password for CouchDB are set in the `couchdb` secret:
+
+```
+kubectl -n openwhisk create secret generic couchdb \
+    --from-literal=username=YOURUSERNAME --from-literal=password=YOURPASSWORD
+```
+
+The tokens used for authentication between *system* components and
+*guest* users are set in the `openwhisk` secret. OpenWhisk requires
+these tokens to be a specific format: a UUID and a key separated by a
+colon. The key must contain exactly 64 alphanumeric characters. For
+example, here's one way of creating a valid token on Linux:
+
+```
+UUID=$(cat /proc/sys/kernel/random/uuid)
+KEY=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 64 | head -n 1)
+TOKEN="${UUID}:${KEY}"
+```
+
+You'll need one token for the *system* and one for *guest* users. Both
+should be set in the `openwhisk` secret like so:
+
+```
+kubectl -n openwhisk create secret generic openwhisk \
+    --from-literal=system="$(cat /proc/sys/kernel/random/uuid):$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 64 | head -n 1)" \
+    --from-literal=guest="$(cat /proc/sys/kernel/random/uuid):$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 64 | head -n 1)"
+```
