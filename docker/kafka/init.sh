@@ -6,7 +6,7 @@ set -m
 TIMEOUT=0
 PASSED=false
 echo "wait for Kafka to be up and running"
-until [ $TIMEOUT -eq 25 ]; do
+until [ $TIMEOUT -eq 300 ]; do
   echo "waiting for kafka to be available"
 
   nc -z 127.0.0.1 $KAFKA_PORT
