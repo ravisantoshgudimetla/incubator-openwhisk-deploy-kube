@@ -86,12 +86,3 @@ data:
 
     CATALOG_NAMESPACE="/whisk.system"
     CATALOG_AUTH_KEY="/openwhisk/ansible/files/auth.whisk.system"
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: couchdb
-type: Opaque
-data:
-  password: Y291Y2hfcGFzc3dvcmQ=
-  username: Y291Y2hfdXNlcm5hbWU=
