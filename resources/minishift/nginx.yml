@@ -122,6 +122,9 @@ spec:
       - name: nginx-conf
         configMap:
           name: nginx
+      - name: openwhisk-config
+        configMap:
+          name: openwhisk-config
       - name: logs
         emptyDir: {}
       containers:
@@ -139,3 +142,5 @@ spec:
           subPath: "nginx.conf"
         - name: logs
           mountPath: "/logs"
+        - name: openwhisk-config
+          mountPath: "/openwhisk_config"

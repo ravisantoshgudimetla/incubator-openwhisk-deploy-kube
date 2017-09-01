@@ -39,7 +39,7 @@ $PATH (download from
 https://github.com/apache/incubator-openwhisk-cli/releases/), then:
 
 ```
-export AUTH_SECRET=$(oc get secret openwhisk -o yaml | grep "system:" | awk '{print $2}' | base64 -d)
+AUTH_SECRET=$(oc get secret openwhisk -o yaml | grep "system:" | awk '{print $2}' | base64 -d)
 wsk property set --auth $AUTH_SECRET --apihost $(oc get route/openwhisk --template={{.spec.host}})
 wsk -i list
 wsk -i action invoke /whisk.system/utils/echo -p message hello -b
@@ -48,15 +48,7 @@ wsk -i action invoke /whisk.system/utils/echo -p message hello -b
 Without the `-i` option, you will get a certificate validation error
 due to the self-signed cert the nginx service is using.
 
-If the `wsk` command seems to hang, cancel it and try bouncing the
-nginx pod, since its IP addresses for any restarted controllers may be
-stale:
-
-```
-oc delete pod -l name=nginx
-```
-
-If that's successful, try a more complex example involving triggers
+Assuming that worked, try a more complex example involving triggers
 and rules. First, install the alarms package:
 
 ```
