@@ -71,11 +71,17 @@ spec:
         - name: "LOADBALANCER_INVOKERBUSYTHRESHOLD"
           value: "16"
 
-        # obsolete but "required" options
-        - name: "CONSULSERVER_HOST"
-          value: "consul"
-        - name: "CONSUL_HOST_PORT4"
-          value: "8500"
+        # Required options
+        - name: "LIMITS_ACTIONS_SEQUENCE_MAXLENGTH"
+          value: "50"
+        - name: "LIMITS_ACTIONS_INVOKES_PERMINUTE"
+          value: "120"
+        - name: "LIMITS_ACTIONS_INVOKES_CONCURRENT"
+          value: "100"
+        - name: "LIMITS_ACTIONS_INVOKES_CONCURRENTINSYSTEM"
+          value: "500"
+        - name: "LIMITS_TRIGGERS_FIRES_PERMINUTE"
+          value: "60"
 
         # This needs to stay up to date with the lates runtime in Ansible Groupvars
         - name: "RUNTIMES_MANIFEST"
@@ -97,20 +103,6 @@ spec:
           value: "kafka"
         - name: "KAFKA_HOST_PORT"
           value: "9092"
-
-        # specific controller arguments
-        - name: "CONTROLLER_OPTS"
-          value: ""
-        - name: "DEFAULTLIMITS_ACTIONS_INVOKES_PERMINUTE"
-          value: "120"
-        - name: "DEFAULTLIMITS_ACTIONS_INVOKES_CONCURRENT"
-          value: "100"
-        - name: "DEFAULTLIMITS_ACTIONS_INVOKES_CONCURRENTINSYSTEM"
-          value: "500"
-        - name: "DEFAULTLIMITS_ACTIONS_SEQUENCE_MAXLENGTH"
-          value: "50"
-        - name: "DEFAULTLIMITS_TRIGGERS_FIRES_PERMINUTE"
-          value: "60"
 
         # properties for DB connection
         - name: "DB_PORT"
