@@ -39,7 +39,7 @@ $PATH (download from
 https://github.com/apache/incubator-openwhisk-cli/releases/), then:
 
 ```
-AUTH_SECRET=$(oc get secret openwhisk -o yaml | grep "system:" | awk '{print $2}' | base64 -d)
+AUTH_SECRET=$(oc get secret openwhisk -o yaml | grep "system:" | awk '{print $2}' | base64 --decode)
 wsk property set --auth $AUTH_SECRET --apihost $(oc get route/openwhisk --template={{.spec.host}})
 wsk -i list
 wsk -i action invoke /whisk.system/utils/echo -p message hello -b

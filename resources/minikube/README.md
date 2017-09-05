@@ -41,7 +41,7 @@ $PATH (download from
 https://github.com/apache/incubator-openwhisk-cli/releases/), then:
 
 ```
-AUTH_SECRET=$(kubectl -n openwhisk get secret openwhisk -o yaml | grep "system:" | awk '{print $2}' | base64 -d)
+AUTH_SECRET=$(kubectl -n openwhisk get secret openwhisk -o yaml | grep "system:" | awk '{print $2}' | base64 --decode)
 WSK_PORT=$(kubectl -n openwhisk describe service nginx | grep https-api | grep NodePort| awk '{print $3}' | cut -d'/' -f1)
 wsk property set --auth $AUTH_SECRET --apihost https://$(minikube ip):$WSK_PORT
 wsk -i list
