@@ -1,0 +1,109 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: couchdb-headless
+  namespace: openwhisk
+  labels:
+    app: couchdb-headless
+spec:
+  ports:
+  - name: couchdb-port
+    port: 5984
+  selector:
+    app: couchdb
+  clusterIP: None
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: couchdb
+  namespace: openwhisk
+  labels:
+    app: couchdb
+spec:
+  ports:
+  - name: couchdb-port
+    port: 5984
+  selector:
+    app: couchdb
+---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: couchdb-budget
+  namespace: openwhisk
+  labels:
+    app: couchdb
+spec:
+  selector:
+    matchLabels:
+      app: couchdb
+  minAvailable: 1
+---
+apiVersion: apps/v1beta1
+kind: StatefulSet
+metadata:
+  name: couchdb
+  namespace: openwhisk
+  labels:
+    app: couchdb
+spec:
+  serviceName: couchdb-headless
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: couchdb
+      annotations:
+        pod.alpha.kubernetes.io/initialized: "true"
+
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: "app"
+                    operator: In
+                    values:
+                    - couchdb-headless
+              topologyKey: "kubernetes.io/hostname"
+      containers:
+      - name: cluster-sidecar
+        image: docker.io/6fusion/couchdb-sidecar:alpha
+        imagePullPolicy: IfNotPresent
+      - name: couchdb
+        image: docker.io/6fusion/couchdb:alpha
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            memory: "4Gi"
+            cpu: "1"
+        ports:
+        - containerPort: 5984
+          name: couchdb-port
+        - containerPort: 4369
+          name: epmd-port
+        - containerPort: 9100
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: COUCHDB_USER
+          value: admin
+        - name: COUCHDB_PASSWORD
+          value: password
+        volumeMounts:
+        - name: data
+          mountPath: /opt/couchdb/data
+      imagePullSecrets:
+      - name: meter-registry
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 20Gi
