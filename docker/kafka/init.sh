@@ -36,6 +36,13 @@ if ! ([[ "$OUTPUT" == *"already exists"* ]] || [[ "$OUTPUT" == *"Created topic"*
   exit 1
 fi
 
+echo "Create cacheInvalidation topic"
+OUTPUT=$(kafka-topics.sh --create --topic cacheInvalidation --replication-factor $REPLICATION_FACTOR --partitions $PARTITIONS --zookeeper ${ZOOKEEPER_HOST}:${ZOOKEEPER_PORT} --config retention.bytes=$KAFKA_TOPICS_HEALTH_RETENTIONBYTES --config retention.ms=$KAFKA_TOPICS_HEALTH_RETENTIONMS --config segment.bytes=$KAFKA_TOPICS_HEALTH_SEGMENTBYTES)
+if ! ([[ "$OUTPUT" == *"already exists"* ]] || [[ "$OUTPUT" == *"Created topic"* ]]); then
+  echo "Failed to create cacheInvalidation topic"
+  exit 1
+fi
+
 echo "Create completed topics"
 CONTROLLER_COUNT=$((CONTROLLER_COUNT - 1))
 for i in `seq 0 $CONTROLLER_COUNT`; do
