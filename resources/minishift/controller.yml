@@ -45,9 +45,17 @@ spec:
             path: "/ping"
             port: 8080
             scheme: "HTTP"
-          initialDelaySeconds: 5
+          initialDelaySeconds: 30
           periodSeconds: 10
           timeoutSeconds: 1
+        readinessProbe:
+          httpGet:
+            path: "/ping"
+            port: 8080
+            scheme: "HTTP"
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 1
         env:
         - name: "PORT"
           value: "8080"
