@@ -25,26 +25,18 @@ data:
     WHISK_LOGS_DIR=/tmp/wsklogs
     WHISK_VERSION_DATE=2017-05-25T01:36:40Z
     WHISK_VERSION_BUILDNO=latest
-  
-    RUNTIMES_MANIFEST='{"defaultImagePrefix": "openwhisk", "defaultImageTag": "latest", "blackboxes": [{"name": "dockerskeleton"}], "runtimes": {"python": [{"kind": "python", "image": {"name": "python2action"}}, {"default": true, "kind": "python:2", "image": {"name": "python2action"}}, {"kind": "python:3", "image": {"name": "python3action"}}], "swift": [{"deprecated": true, "kind": "swift", "image": {"name": "swiftaction"}}, {"default": true, "kind": "swift:3", "image": {"name": "swift3action"}}], "java": [{"kind": "java", "default": true, "image": {"name": "java8action"}, "attached": {"attachmentType": "application/java-archive", "attachmentName": "jarfile"}, "sentinelledLogs": false, "requireMain": true}], "nodejs": [{"deprecated": true, "kind": "nodejs", "image": {"name": "nodejsaction"}}, {"default": true, "kind": "nodejs:6", "image": {"name": "nodejs6action"}}]}}'
-    
-    DEFAULTLIMITS_ACTIONS_INVOKES_PERMINUTE=120
-    DEFAULTLIMITS_ACTIONS_INVOKES_CONCURRENT=100
-    DEFAULTLIMITS_ACTIONS_INVOKES_CONCURRENTINSYSTEM=5000
-    DEFAULTLIMITS_ACTIONS_SEQUENCE_MAXLENGTH=50
-    DEFAULTLIMITS_TRIGGERS_FIRES_PERMINUTE=60
 
-    LIMITS_ACTIONS_INVOKES_PERMINUTE=60
-    LIMITS_ACTIONS_INVOKES_CONCURRENT=30
-    LIMITS_ACTIONS_INVOKES_CONCURRENTINSYSTEM=5000
+    LIMITS_ACTIONS_SEQUENCE_MAXLENGTH=50
+    LIMITS_ACTIONS_INVOKES_PERMINUTE=120
+    LIMITS_ACTIONS_INVOKES_CONCURRENT=100
+    LIMITS_ACTIONS_INVOKES_CONCURRENTINSYSTEM=500
     LIMITS_TRIGGERS_FIRES_PERMINUTE=60
+
+    RUNTIMES_MANIFEST='{"defaultImagePrefix": "openwhisk", "defaultImageTag": "latest", "blackboxes": [{"name": "dockerskeleton"}], "runtimes": {"python": [{"kind": "python", "image": {"name": "python2action"}}, {"default": true, "kind": "python:2", "image": {"name": "python2action"}}, {"kind": "python:3", "image": {"name": "python3action"}}], "swift": [{"deprecated": true, "kind": "swift", "image": {"name": "swiftaction"}}, {"default": true, "kind": "swift:3", "image": {"name": "swift3action"}}], "java": [{"kind": "java", "default": true, "image": {"name": "java8action"}, "attached": {"attachmentType": "application/java-archive", "attachmentName": "jarfile"}, "sentinelledLogs": false, "requireMain": true}], "nodejs": [{"deprecated": true, "kind": "nodejs", "image": {"name": "nodejsaction"}}, {"default": true, "kind": "nodejs:6", "image": {"name": "nodejs6action"}}]}}'
 
     CONTROLLER_HOST=controller-0.controller
     CONTROLLER_HOST_PORT=8080
-
-    CONSULSERVER_HOST=consul
-    CONSUL_HOST=consul
-    CONSUL_HOST_PORT4=8500
+    CONTROLLER_INSTANCES=2
     
     KAFKA_HOST=kafka
     KAFKA_HOST_PORT=9092
@@ -82,7 +74,7 @@ data:
     DOCKER_IMAGE_PREFIX="projectodd"
     DOCKER_IMAGE_TAG="openshift-latest"
 
-    LOADBALANCER_ACTIVATIONCOUNTBEFORENEXTINVOKER=10
+    LOADBALANCER_INVOKERBUSYTHRESHOLD=16
 
     CATALOG_NAMESPACE="/whisk.system"
     CATALOG_AUTH_KEY="/openwhisk/ansible/files/auth.whisk.system"
