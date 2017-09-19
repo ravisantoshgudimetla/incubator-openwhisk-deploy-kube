@@ -13,6 +13,15 @@ spec:
       targetPort: 5984
       name: couchdb
 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: couchdb
+data:
+  init: |
+    source /openwhisk_config/env
+    exec /init.sh
+---
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
@@ -31,12 +40,16 @@ spec:
       - name: openwhisk-config
         configMap:
           name: openwhisk-config
+      - name: couchdb-config
+        configMap:
+          name: couchdb
       - name: couchdb-data
         emptyDir: {}
       containers:
       - name: couchdb
         imagePullPolicy: IfNotPresent
         image: projectodd/whisk_couchdb:openshift-latest
+        command: ["/bin/bash", "-o", "allexport", "/couchdb_config/init" ]
         ports:
         - name: couchdb
           containerPort: 5984
@@ -66,5 +79,7 @@ spec:
         volumeMounts:
           - name: openwhisk-config
             mountPath: "/openwhisk_config"
+          - name: couchdb-config
+            mountPath: "/couchdb_config"
           - name: couchdb-data
             mountPath: "/usr/local/var/lib/couchdb"
