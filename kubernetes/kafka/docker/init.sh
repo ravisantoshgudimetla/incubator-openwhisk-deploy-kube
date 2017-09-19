@@ -1,12 +1,12 @@
 #!/bin/bash
 
 set -m
-/start.sh &
+/start.sh /server.properties &
 
 TIMEOUT=0
 PASSED=false
 echo "wait for Kafka to be up and running"
-until [ $TIMEOUT -eq 25 ]; do
+until [ $TIMEOUT -eq 300 ]; do
   echo "waiting for kafka to be available"
 
   nc -z 127.0.0.1 $KAFKA_PORT
@@ -33,6 +33,13 @@ echo "Create health topic"
 OUTPUT=$(kafka-topics.sh --create --topic health --replication-factor $REPLICATION_FACTOR --partitions $PARTITIONS --zookeeper ${ZOOKEEPER_HOST}:${ZOOKEEPER_PORT} --config retention.bytes=$KAFKA_TOPICS_HEALTH_RETENTIONBYTES --config retention.ms=$KAFKA_TOPICS_HEALTH_RETENTIONMS --config segment.bytes=$KAFKA_TOPICS_HEALTH_SEGMENTBYTES)
 if ! ([[ "$OUTPUT" == *"already exists"* ]] || [[ "$OUTPUT" == *"Created topic"* ]]); then
   echo "Failed to create heath topic"
+  exit 1
+fi
+
+echo "Create cacheInvalidation topic"
+OUTPUT=$(kafka-topics.sh --create --topic cacheInvalidation --replication-factor $REPLICATION_FACTOR --partitions $PARTITIONS --zookeeper ${ZOOKEEPER_HOST}:${ZOOKEEPER_PORT} --config retention.bytes=$KAFKA_TOPICS_HEALTH_RETENTIONBYTES --config retention.ms=$KAFKA_TOPICS_HEALTH_RETENTIONMS --config segment.bytes=$KAFKA_TOPICS_HEALTH_SEGMENTBYTES)
+if ! ([[ "$OUTPUT" == *"already exists"* ]] || [[ "$OUTPUT" == *"Created topic"* ]]); then
+  echo "Failed to create cacheInvalidation topic"
   exit 1
 fi
 
