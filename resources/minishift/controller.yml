@@ -86,6 +86,10 @@ spec:
           mountPath: "/openwhisk_config"
         - name: controller-config
           mountPath: "/controller_config"
+      initContainers:
+      - name: wait-for-couchdb
+        image: busybox
+        command: ['sh', '-c', 'until wget -T 5 --spider http://couchdb:5984/_all_dbs; do echo waiting for couchdb; sleep 2; done;']
 ---
 apiVersion: batch/v1
 kind: Job
