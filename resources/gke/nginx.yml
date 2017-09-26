@@ -1,0 +1,161 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+  labels:
+    name: nginx
+spec:
+  type: LoadBalancer
+  selector:
+    name: nginx
+  ports:
+    - port: 80
+      targetPort: 80
+      name: http
+    - port: 443
+      targetPort: 443
+      name: https-api
+    - port: 8443
+      targetPort: 8443
+      name: https-admin
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx
+data:
+  nginx.conf: |
+    events {
+        worker_connections  4096;
+    }
+    
+    http {
+        client_max_body_size 50M;
+    
+        rewrite_log on;
+        log_format combined-upstream '$remote_addr - $remote_user [$time_local] '
+            '$request $status $body_bytes_sent '
+            '$http_referer $http_user_agent $upstream_addr';
+        access_log /logs/nginx_access.log combined-upstream;
+    
+        upstream controllers {
+            # These addresses are for the controller. If there are more
+            # than two invoker instances deployed then you will need to
+            # add additional controller addresses.
+    
+            server controller-0.controller:8080 fail_timeout=60s;
+            server controller-1.controller:8080 backup;
+        }
+    
+        server {
+            listen 443 default ssl;
+    
+            # match namespace, note while OpenWhisk allows a richer character set for a
+            # namespace, not all those characters are permitted in the (sub)domain name;
+            # if namespace does not match, no vanity URL rewriting takes place.
+            server_name ~^(?<namespace>[0-9a-zA-Z-]+)\.localhost$;
+    
+            ssl_session_cache    shared:SSL:1m;
+            ssl_session_timeout  10m;
+            ssl_certificate      /etc/nginx/certs/tls.crt;
+            ssl_certificate_key  /etc/nginx/certs/tls.key;
+            ssl_verify_client off;
+            ssl_protocols        TLSv1 TLSv1.1 TLSv1.2;
+            ssl_ciphers RC4:HIGH:!aNULL:!MD5;
+            ssl_prefer_server_ciphers on;
+            proxy_ssl_session_reuse off;
+    
+            # proxy to the web action path
+            location / {
+                if ($namespace) {
+                  rewrite    /(.*) /api/v1/web/${namespace}/$1 break;
+                }
+                proxy_pass http://controllers;
+                proxy_read_timeout 70s; # 60+10 additional seconds to allow controller to terminate request
+            }
+    
+            # proxy to 'public/html' web action by convention
+            location = / {
+                if ($namespace) {
+                  rewrite    ^ /api/v1/web/${namespace}/public/index.html break;
+                }
+                proxy_pass http://controllers;
+                proxy_read_timeout 70s; # 60+10 additional seconds to allow controller to terminate request
+            }
+    
+            location /blackbox-0.1.0.tar.gz {
+                root /etc/nginx;
+            }
+    
+            location /OpenWhiskIOSStarterApp.zip {
+                return 301 https://github.com/openwhisk/openwhisk-client-swift/releases/download/0.2.3/starterapp-0.2.3.zip;
+            }
+    
+            location /cli/go/download {
+                autoindex on;
+                root /etc/nginx;
+            }
+        }
+    }
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: nginx
+  labels:
+    name: nginx
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        name: nginx
+    spec:
+      restartPolicy: Always
+      volumes:
+      - name: nginx-certs
+        secret:
+          secretName: nginx
+      - name: nginx-conf
+        configMap:
+          name: nginx
+      - name: openwhisk-config
+        configMap:
+          name: openwhisk-config
+      - name: logs
+        emptyDir: {}
+      containers:
+      - name: nginx
+        imagePullPolicy: IfNotPresent
+        image: projectodd/whisk_nginx:openshift-latest
+        ports:
+        - name: http
+          containerPort: 80
+        - name: http-api
+          containerPort: 443
+        - name: https-admin
+          containerPort: 8443
+        volumeMounts:
+        - name: nginx-conf
+          mountPath: "/etc/nginx/nginx.conf"
+          subPath: "nginx.conf"
+        - name: nginx-certs
+          mountPath: "/etc/nginx/certs"
+        - name: logs
+          mountPath: "/logs"
+        - name: openwhisk-config
+          mountPath: "/openwhisk_config"
+      initContainers:
+      - name: wait-for-controller
+        image: busybox
+        command: ['sh', '-c', 'until wget -T 5 --spider http://controller:8080/ping; do echo waiting for controller; sleep 2; done;']
+---
+apiVersion: v1
+data:
+  tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUMrekNDQWVPZ0F3SUJBZ0lKQU5WVGN1b2VXZ1J0TUEwR0NTcUdTSWIzRFFFQkN3VUFNQlF4RWpBUUJnTlYKQkFNTUNXeHZZMkZzYUc5emREQWVGdzB4TnpBNE1ESXdOREEwTXpKYUZ3MHhPREE0TURJd05EQTBNekphTUJReApFakFRQmdOVkJBTU1DV3h2WTJGc2FHOXpkRENDQVNJd0RRWUpLb1pJaHZjTkFRRUJCUUFEZ2dFUEFEQ0NBUW9DCmdnRUJBS2lFc1hJWWxzRVRCdmNwb3dYZStySHlTYjlzc3h4Q05MZnBGVmRHS0Q2OWNSZXlCMVZ1UW1kN0lvZlQKTk1oYjhGdnVtRlpIS3R3UUdLKytwT0RUVGJiUGt0a3JSazlhMUVTbStGb3dyK2dLMGd1SVhsUFNuM3Q0ME9leQpnV3dpb3haVzhtUTNEaytnZzhLUWtpQVVtelRlRWx6TGJXVEpDVkxNaEdlTHFCcVhzUmV1b1VBbDhHT09mSlRMCnRyU2k2SktELzFTRmo2bjM3TzF6L21rTDJwOHlqTnZjSm5aYVQ4S2lpbGVkR1FYa0JYOWFlRXVrdjdZaWt3REIKL3lRU3VWd1JMT1lNNlQzaVpNNTFrdXBVSDhvYUlLVDJCS3d6R0p3VSsyL2Y3RVRxdmtwdWRPWEZPL2xseUUxSwptR1YrTTlLMElUU2dudURYZENGK1VmVkFpN01DQXdFQUFhTlFNRTR3SFFZRFZSME9CQllFRkNZZXMzSlVZa1B2CkkyeTQxU1l5VlhvVGh5NVpNQjhHQTFVZEl3UVlNQmFBRkNZZXMzSlVZa1B2STJ5NDFTWXlWWG9UaHk1Wk1Bd0cKQTFVZEV3UUZNQU1CQWY4d0RRWUpLb1pJaHZjTkFRRUxCUUFEZ2dFQkFEaStpWWsxL3JMdlZYZ1VzREI1YVJNZgpqMmwwSHhiMFJoSyt0QTdnbHpYQWJhdlBwS0QyV0wyakhNVEhPVVY5dWVOb2pCTnI2b055UEN4Y0tlUEh2VTdKCnZkNDhONzBGMm1zQTcyempESm9ySGEyVFpMQjJPWFhqRm95cHFRSnROZ1RWaStRN2M2aUh6Q3pIVEpzRjdRTEMKRFFwcUU3eTVQa2xQSy8xTzJVT0REcFJKQzNoZ0VsRVJEWFpQaDZSUjRnZVB6SzRhb1ZpNzN5c2ZVOVNPWS9mRwpva0NyVlRpdEtVV2dMbWRKSVZXTEJnU2o4SHltZFUrcWV1c1dlc2d5V2JraW5JSmtEWlhHY2N1aDBTNWtjV0Q0CjdOMk1RL1FPRnc2SGtxWFVUMnpiSDR6cVNFYTBUa2dCd0NZcC9HTlFQWTcvbFJFRnUrWGI5WDV1blcwTVZSQT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+  tls.key: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2UUlCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktjd2dnU2pBZ0VBQW9JQkFRQ29oTEZ5R0piQkV3YjMKS2FNRjN2cXg4a20vYkxNY1FqUzM2UlZYUmlnK3ZYRVhzZ2RWYmtKbmV5S0gwelRJVy9CYjdwaFdSeXJjRUJpdgp2cVRnMDAyMno1TFpLMFpQV3RSRXB2aGFNSy9vQ3RJTGlGNVQwcDk3ZU5EbnNvRnNJcU1XVnZKa053NVBvSVBDCmtKSWdGSnMwM2hKY3kyMWt5UWxTeklSbmk2Z2FsN0VYcnFGQUpmQmpqbnlVeTdhMG91aVNnLzlVaFkrcDkrenQKYy81cEM5cWZNb3piM0NaMldrL0Nvb3BYblJrRjVBVi9XbmhMcEwrMklwTUF3ZjhrRXJsY0VTem1ET2s5NG1UTwpkWkxxVkIvS0dpQ2s5Z1NzTXhpY0ZQdHYzK3hFNnI1S2JuVGx4VHY1WmNoTlNwaGxmalBTdENFMG9KN2cxM1FoCmZsSDFRSXV6QWdNQkFBRUNnZ0VBSHJHMHBHU0lLUGl2UHh1dFh1ZGpZRUFTWUxTSzF5M1Q3bCtkREgxeDNTT2kKVXIrUmlHVUI0VmxUUzh3VGhCOEM0NnZNd1lKSzh6UlhXc050d3FtYU1SOFR6MHlMak82dFZTZlllb3o5clZVegpOdmlLdmRmU1Jxb1YydTN2bHVPa012QjVTL21mT0sreThDQm5EVUxUbGtpUXJhZzc3NnlTYnl0alBuejRqSWNpCitEekVlcnRBbzkzVU4zSGh0RTkyMEt3OGVlWStxa3lLVU10cFR0emdiaGN0NXlOenovWW1WUFZ0ajRPR1M4b2oKaHhobHUxR0tIS3AvNW00TnRyb2I5alFLUTN1NWdFTkJmdU5HaXNNVGxSSnFzeDVTSk56Nk1PMkNhTWFZQXk3TApzM2Exdlp1YkFXbHppMkpwbHlKMGh1RUt1R1VtV2ZmcEQ4a0crczlUNFFLQmdRRFlIMlRRV2o1NTJVNWsvM3MvCmZqWkh2VXArdWlnRjk4dDFHUld1QWRGZzlOajhWRWdwcEF5dktQajVjKzI2NmRwMlBXQnZRK3V5MXdvTSsvd0wKMHFpMG8ybUZaanc3dnc1aGt5VGszV25pcnltVXFqRzdRTllsQW1ic1pZRU5KbXAyYmlzODNCaFlpZTVLSXcyZwpWR0VLa2cyVXd3Qjg3S0NLdnBaUGM3Ylk0d0tCZ1FESG5MTE14UTREelVKQm9nSVpYSEhBU29oZ2xORWVpbDJiCjVQa3h3RW9VNUVpZlY0Z1dEZkgyRDFkZndnNVZrVHJnNERwUCtyaUd2b2NicGZ1MldocUE3ZTB4ZzVjQ2pOdm8KNzVneFhQQWJoSW9WUTgrbHd2ZVRWT05Id2tUeXJzQWdzYy94VXVKaUFrYVkyT1VLa0IyZVo0cVIvUzFMam5ncgp4SnlzNER5SzhRS0JnUUM4RkMzK3A5cGczYnk4WmgwU3R6cHptZ2FmWEUrQ1NnKzBPdjFEN2U4UmltTGV6RlgwCmJ3QmUyckE1SGlzUGszMTdrcFErb0FRWkljeHNXa29RMitYWE5iS1oxY3VyVHV3ci9BcUtaU2xGalp3STlVZk0KSm5OMXg2NWNJVVY2ZFNrSElYN2RPc2l4SEcvVDhzZGo5S3B5c1lIQ0tTVmVrZXB3YzhXSkpURkZjd0tCZ0JjVAo5ZFFZNEVMdVF6L0ZWRXJNVmxadUI1QnJCRFpzdHQva1BDOVZWUHRQWFZvV3k2UUpIclZkRnJQNmdwKy85N2V5CkZPdlVSK3RFTWVpdmF3ZXRLUzFJMU1pSnR6YlRSRVdORmVKM0pVZDVMbUhCQWt2ZTI3TEwrSzcrTmV4ODZiZWQKOXpXbWFJZitUVjAwamw2SFJQVmdjVFBwdW9mbXc5d0RrajJtZXpseEFvR0FBY3VGWXhOZDJLYmNjOHVVNHR0VAp1dUVuNXJNeVcxTERRb29FSmhBQ2RwdEFpMFhSY3d0RmtNdHZWSnQvaytUS3VCN3MwaW50eWI1Q1hpbnluNjd3Ci8wTm5PSWJFYUlHNnFRR29id0YzcUhIdHBObWN2QVJ6bzJTK2NwZkl2WERXamlvdEc1NVM2NmozTE1UZWpKOXEKQnhDZWZTWWttUmVCZlNZbUUzMGwzTmc9Ci0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K
+kind: Secret
+metadata:
+  name: nginx
+type: kubernetes.io/tls
