@@ -41,19 +41,6 @@ spec:
         image: projectodd/invoker:openshift-latest
         command: [ "/bin/bash", "-o", "allexport", "/invoker_config/init" ]
         env:
-          - name: "PORT"
-            value: "8080"
-          - name: "SERVICE_CHECK_HTTP"
-            value: "/ping"
-          - name: "SERVICE_CHECK_TIMEOUT"
-            value: "2s"
-          - name: "SERVICE_CHECK_INTERVAL"
-            value: "15s"
-
-          # Invoker instance count. Needs to match replica count
-          - name: "INVOKER_INSTANCES"
-            value: "1"
-
           # Database credentials
           - name: "DB_USERNAME"
             valueFrom:
