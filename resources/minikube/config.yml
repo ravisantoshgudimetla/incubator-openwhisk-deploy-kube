@@ -55,7 +55,8 @@ data:
     APIGW_HOST_V2="nginx"
 
     DOCKER_REGISTRY=""
-    DOCKER_IMAGE_PREFIX="openwhisk"
+    DOCKER_IMAGE_PREFIX="projectodd"
+    DOCKER_IMAGE_TAG="openshift-latest"
 
     LOADBALANCER_INVOKERBUSYTHRESHOLD=16
 
