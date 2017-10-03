@@ -22,6 +22,9 @@ data:
     CONTROLLER_HOST=controller-0.controller
     CONTROLLER_HOST_PORT=8080
     CONTROLLER_INSTANCES=2
+    CONTROLLER_BLACKBOXFRACTION=0.10
+    CONTROLLER_LOCALBOOKKEEPING=true
+    AKKA_CLUSTER_SEED_NODES="controller-0.controller controller-1.controller"
     
     KAFKA_HOST=kafka
     KAFKA_PORT=9092
