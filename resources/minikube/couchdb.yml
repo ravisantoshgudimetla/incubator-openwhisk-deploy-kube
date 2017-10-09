@@ -54,13 +54,15 @@ spec:
         - name: couchdb
           containerPort: 5984
         env:
+        - name: "NODENAME"
+          value: "couchdb0"
         # Database credentials
-        - name: "DB_USERNAME"
+        - name: "COUCHDB_USER"
           valueFrom:
             secretKeyRef:
               name: "couchdb"
               key: "username"
-        - name: "DB_PASSWORD"
+        - name: "COUCHDB_PASSWORD"
           valueFrom:
             secretKeyRef:
               name: "couchdb"

@@ -30,25 +30,25 @@ pushd /openwhisk
     ansible-playbook -i environments/local setup.yml \
       -e db_host=$DB_HOST \
       -e db_prefix=$DB_PREFIX \
-      -e db_username=$DB_USERNAME \
-      -e db_password=$DB_PASSWORD \
+      -e db_username=$COUCHDB_USER \
+      -e db_password=$COUCHDB_PASSWORD \
       -e db_port=$DB_PORT \
       -e openwhisk_home=/openwhisk
   popd
 
   # create the admin user
-  curl -X PUT http://$DB_HOST:$DB_PORT/_config/admins/$DB_USERNAME -d "\"$DB_PASSWORD\""
+  curl -X PUT http://$DB_HOST:$DB_PORT/_config/admins/$COUCHDB_USER -d "\"$COUCHDB_PASSWORD\""
 
   # disable reduce limits on views
-  curl -X PUT http://$DB_USERNAME:$DB_PASSWORD@$DB_HOST:$DB_PORT/_config/query-server_config/reduce_limit -d '"false"'
+  curl -X PUT http://$COUCHDB_USER:$COUCHDB_PASSWORD@$DB_HOST:$DB_PORT/_config/query-server_config/reduce_limit -d '"false"'
 
   pushd ansible
     # initialize the DB
     ansible-playbook -i environments/local initdb.yml \
       -e db_host=$DB_HOST \
       -e db_prefix=$DB_PREFIX \
-      -e db_username=$DB_USERNAME \
-      -e db_password=$DB_PASSWORD \
+      -e db_username=$COUCHDB_USER \
+      -e db_password=$COUCHDB_PASSWORD \
       -e db_port=$DB_PORT \
       -e openwhisk_home=/openwhisk
 
@@ -56,8 +56,8 @@ pushd /openwhisk
     ansible-playbook -i environments/local wipe.yml \
       -e db_host=$DB_HOST \
       -e db_prefix=$DB_PREFIX \
-      -e db_username=$DB_USERNAME \
-      -e db_password=$DB_PASSWORD \
+      -e db_username=$COUCHDB_USER \
+      -e db_password=$COUCHDB_PASSWORD \
       -e db_port=$DB_PORT \
       -e openwhisk_home=/openwhisk
   popd
