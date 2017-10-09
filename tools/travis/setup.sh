@@ -32,7 +32,7 @@ pushd $HOME/kubernetes
   kubectl config use-context local
 
   # start kubernetes in the background
-  sudo PATH=$PATH:/home/travis/.gimme/versions/go1.7.linux.amd64/bin/go \
+  sudo PATH=$PATH:/home/travis/.gimme/versions/go1.8.linux.amd64/bin/go \
        KUBE_ENABLE_CLUSTER_DNS=true \
        hack/local-up-cluster.sh &
 popd
