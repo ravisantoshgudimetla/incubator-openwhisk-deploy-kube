@@ -84,4 +84,4 @@ spec:
           - name: couchdb-config
             mountPath: "/couchdb_config"
           - name: couchdb-data
-            mountPath: "/usr/local/var/lib/couchdb"
+            mountPath: "/opt/couchdb/data"
