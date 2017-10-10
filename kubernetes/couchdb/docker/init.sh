@@ -19,34 +19,48 @@ pushd /openwhisk
   fi
 
   # start couchdb with a background process
-  couchdb -b -o /tmp/couchdb.stdout -e /tmp/couchdb.stderr
+  /docker-entrypoint.sh /opt/couchdb/bin/couchdb &
 
   # wait for couchdb to be up and running
-  echo "Waiting for couchdb to be available"
-  until $(curl --output /dev/null --silent --head --fail http://localhost:${DB_PORT}/_all_dbs); do printf '.'; sleep 1; done
+  TIMEOUT=0
+  echo "wait for CouchDB to be up and running"
+  until $( curl --output /dev/null --silent http://$DB_HOST:$DB_PORT/_utils ) || [ $TIMEOUT -eq 25 ]; do
+    echo "waiting for CouchDB to be available"
+
+    sleep 0.2
+    let TIMEOUT=TIMEOUT+1
+  done
+
+  if [ $TIMEOUT -eq 25 ]; then
+    echo "failed to setup CouchDB"
+    exit 1
+  fi
+
 
   # setup and initialize DB
   pushd ansible
     ansible-playbook -i environments/local setup.yml \
-      -e db_host=$DB_HOST \
       -e db_prefix=$DB_PREFIX \
+      -e db_host=$DB_HOST \
       -e db_username=$COUCHDB_USER \
       -e db_password=$COUCHDB_PASSWORD \
       -e db_port=$DB_PORT \
       -e openwhisk_home=/openwhisk
   popd
 
-  # create the admin user
-  curl -X PUT http://$DB_HOST:$DB_PORT/_config/admins/$COUCHDB_USER -d "\"$COUCHDB_PASSWORD\""
-
   # disable reduce limits on views
-  curl -X PUT http://$COUCHDB_USER:$COUCHDB_PASSWORD@$DB_HOST:$DB_PORT/_config/query-server_config/reduce_limit -d '"false"'
+  curl -X PUT http://$COUCHDB_USER:$COUCHDB_PASSWORD@$DB_HOST:$DB_PORT/_node/couchdb@$NODENAME/_config/query_server_config/reduce_limit -d '"false"'
+
+  # create the couchdb system databases
+  curl -X PUT http://$COUCHDB_USER:$COUCHDB_PASSWORD@$DB_HOST:$DB_PORT/_users
+  curl -X PUT http://$COUCHDB_USER:$COUCHDB_PASSWORD@$DB_HOST:$DB_PORT/_replicator
+  curl -X PUT http://$COUCHDB_USER:$COUCHDB_PASSWORD@$DB_HOST:$DB_PORT/_global_changes
 
   pushd ansible
     # initialize the DB
     ansible-playbook -i environments/local initdb.yml \
-      -e db_host=$DB_HOST \
       -e db_prefix=$DB_PREFIX \
+      -e db_host=$DB_HOST \
       -e db_username=$COUCHDB_USER \
       -e db_password=$COUCHDB_PASSWORD \
       -e db_port=$DB_PORT \
@@ -54,20 +68,15 @@ pushd /openwhisk
 
     # wipe the DB
     ansible-playbook -i environments/local wipe.yml \
-      -e db_host=$DB_HOST \
       -e db_prefix=$DB_PREFIX \
+      -e db_host=$DB_HOST \
       -e db_username=$COUCHDB_USER \
       -e db_password=$COUCHDB_PASSWORD \
       -e db_port=$DB_PORT \
       -e openwhisk_home=/openwhisk
   popd
-
-  # stop the CouchDB background process
-  couchdb -d
-
-  # Unfake the UID
-  unset LD_PRELOAD UID_WRAPPER UID_WRAPPER_ROOT
 popd
 
-# start couchdb that has been setup
-tini -s -- couchdb
+echo "successfully setup and configured CouchDB v2.0"
+
+sleep inf

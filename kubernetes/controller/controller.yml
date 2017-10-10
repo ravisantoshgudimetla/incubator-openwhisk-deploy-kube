@@ -35,9 +35,7 @@ spec:
       containers:
       - name: controller
         imagePullPolicy: Always
-        # Update this image to the publix OpenWhisk Image once this PR is merged.
-        # https://github.com/apache/incubator-openwhisk/pull/2452
-        image: danlavine/whisk_controller
+        image: openwhisk/controller
         command: ["/bin/bash", "-c", "COMPONENT_NAME=$(hostname | cut -d'-' -f2) /controller/bin/controller `hostname | cut -d'-' -f2`"]
         ports:
         - name: controller
@@ -80,6 +78,8 @@ spec:
           value: "9092"
 
         # specific controller arguments
+        - name: "CONTROLLER_INSTANCES"
+          value: "2"
         - name: "CONTROLLER_OPTS"
           value: ""
         - name: "DEFAULTLIMITS_ACTIONS_INVOKES_PERMINUTE"
@@ -92,6 +92,22 @@ spec:
           value: "50"
         - name: "DEFAULTLIMITS_TRIGGERS_FIRES_PERMINUTE"
           value: "60"
+        - name: "LIMITS_ACTIONS_SEQUENCE_MAXLENGTH"
+          value: "50"
+        - name: "LIMITS_TRIGGERS_FIRES_PERMINUTE"
+          value: "60"
+        - name: "LIMITS_ACTIONS_INVOKES_PERMINUTE"
+          value: "60"
+        - name: "LIMITS_ACTIONS_INVOKES_CONCURRENTINSYSTEM"
+          value: "5000"
+        - name: "LIMITS_ACTIONS_INVOKES_CONCURRENT"
+          value: "30"
+        - name: "CONTROLLER_BLACKBOXFRACTION"
+          value: "0.10"
+        - name: "CONTROLLER_LOCALBOOKKEEPING"
+          value: "TRUE"
+        - name: "AKKA_CLUSTER_SEED_NODES"
+          value: "controller-0.controller.openwhisk controller-1.controller.openwhisk"
 
         # properties for DB connection
         - name: "DB_USERNAME"
