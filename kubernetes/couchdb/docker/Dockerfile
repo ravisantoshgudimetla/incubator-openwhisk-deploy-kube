@@ -18,6 +18,7 @@ RUN apt-get -y update && apt-get -y install \
 RUN pip install argcomplete
 RUN pip install couchdb
 RUN pip install --upgrade cffi
+RUN pip install --upgrade setuptools
 RUN pip install markupsafe
 RUN pip install ansible==2.3.0.0
 
