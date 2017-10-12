@@ -1,11 +1,9 @@
 ## Deploying OpenWhisk
 
-There are specific instructions and resource files for deploying
-OpenWhisk to both [minikube](https://github.com/kubernetes/minikube/)
-and [minishift](https://github.com/minishift/minishift/)
-
-* [minikube](resources/minikube/)
-* [minishift](resources/minishift/)
+There are [specific instructions and resource files](resources/) for
+deploying OpenWhisk to both
+[minikube](https://github.com/kubernetes/minikube/) and
+[minishift](https://github.com/minishift/minishift/)
 
 ## Rebuilding the images locally:
 

@@ -76,7 +76,7 @@ namespace "openwhisk" created
 Then, deploy OpenWhisk from this directory:
 
 ```
-kubectl -n openwhisk create -f .
+kubectl -n openwhisk create -f k8s/
 configmap "openwhisk-config" created
 service "controller" created
 configmap "controller" created
@@ -145,7 +145,7 @@ Assuming that worked, try a more complex example involving triggers
 and rules. First, install the alarms package:
 
 ```
-kubectl -n openwhisk create -f packages/alarms.yml
+kubectl -n openwhisk create -f k8s/packages/alarms.yml
 ```
 
 Once the `alarmprovider` pod enters the Running state, try the
