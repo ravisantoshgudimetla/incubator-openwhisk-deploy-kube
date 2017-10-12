@@ -100,6 +100,7 @@ statefulsetHealthCheck () {
 
 # setup couchdb
 pushd kubernetes/couchdb
+  docker build --tag dgrove/whisk_couchdb docker
   kubectl apply -f couchdb.yml
 
   couchdbHealthCheck
