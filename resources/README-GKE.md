@@ -38,7 +38,7 @@ Updated property [core/project].
 Now we need to set up a GKE Kubernetes container cluster. We will start with a 4 node cluster.  You may adjust the options in the command below to your specific use case.
 
 ```
-gcloud beta container --project "openwhisk-gke" clusters create "openwhisk-cluster" --zone "us-west1-a" --username="admin" --cluster-version "1.7.5" --machine-type "n1-standard-2" --image-type "COS" --disk-size "100" --scopes "https://www.googleapis.com/auth/compute","https://www.googleapis.com/auth/devstorage.read_only","https://www.googleapis.com/auth/logging.write","https://www.googleapis.com/auth/monitoring.write","https://www.googleapis.com/auth/servicecontrol","https://www.googleapis.com/auth/service.management.readonly","https://www.googleapis.com/auth/trace.append" --num-nodes "4" --network "default" --enable-cloud-logging --no-enable-cloud-monitoring --enable-legacy-authorization
+gcloud container --project "openwhisk-gke" clusters create "openwhisk-cluster" --zone "us-west1-a" --machine-type "n1-standard-2" --image-type "COS" --disk-size "100" --num-nodes "4"
 
 Creating cluster openwhisk-cluster...done.                                               
 Created [https://container.googleapis.com/v1/projects/openwhisk-gke/zones/us-west1-a/clusters/openwhisk-cluster].
