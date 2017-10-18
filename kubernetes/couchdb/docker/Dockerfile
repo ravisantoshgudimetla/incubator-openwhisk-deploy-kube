@@ -10,17 +10,18 @@ RUN apt-get -y update && apt-get -y install \
   curl \
   sudo \
   python-dev \
+  python-pip \
   libffi-dev \
   libuid-wrapper \
-  python-pip \
   libssl-dev
 
+RUN pip install --upgrade setuptools
 RUN pip install argcomplete
 RUN pip install couchdb
 RUN pip install --upgrade cffi
-RUN pip install --upgrade setuptools
 RUN pip install markupsafe
 RUN pip install ansible==2.3.0.0
+RUN pip install -U pyopenssl
 
 RUN git clone -b kube-container-openshift https://github.com/projectodd/incubator-openwhisk /openwhisk
 
@@ -35,7 +36,7 @@ RUN chgrp -R 0 /openwhisk && \
     mkdir -p /.ansible && \
     chgrp -R 0 /.ansible && \
     chmod -R g+rwX /.ansible
-    
+
 COPY init.sh /init.sh
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /init.sh /docker-entrypoint.sh
