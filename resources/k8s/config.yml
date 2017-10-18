@@ -85,3 +85,6 @@ data:
 
     CATALOG_NAMESPACE="/whisk.system"
     CATALOG_AUTH_KEY="/openwhisk/ansible/files/auth.whisk.system"
+
+    REDIS_HOST=""
+    REDIS_HOST_PORT=""

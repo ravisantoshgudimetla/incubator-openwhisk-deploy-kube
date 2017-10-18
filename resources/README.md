@@ -85,7 +85,11 @@ minishift ssh -- sudo ip link set docker0 promisc on
 eval $(minishift oc-env)
 ```
 
-Then, from this directory, deploy OpenWhisk in its own project:
+Then, from this directory, deploy OpenWhisk in its own project. Note
+that we are passing two directories and the order is important: the
+`openshift/` dir is first, and you will see "already exist" errors
+from those files beneath `k8s/` that are "overridden" in `openshift/`.
+This is expected and can be safely ignored.
 
 ```
 oc new-project openwhisk
@@ -93,11 +97,6 @@ oc create -f openshift/ -f k8s/
 ```
 
 Pass `-R` if you want to deploy the [alarms](#alarms) package as well.
-
-Note that we are passing two directories and the order is important:
-the `openshift/` dir is first, and you will see "already exist" errors
-from those files beneath `k8s/` that are "overridden" in `openshift/`.
-This is expected.
 
 This will take a few minutes. Verify that all pods eventually enter
 the `Running` state:

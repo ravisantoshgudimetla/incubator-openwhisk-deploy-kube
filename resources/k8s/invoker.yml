@@ -52,6 +52,10 @@ spec:
               secretKeyRef:
                 name: "couchdb"
                 key: "password"
+          - name: "INVOKER_NAME"
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
         ports:
         - name: invoker
           containerPort: 8080
