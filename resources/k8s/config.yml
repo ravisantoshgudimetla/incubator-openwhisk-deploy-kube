@@ -21,6 +21,7 @@ data:
 
     CONTROLLER_HOST=controller-0.controller
     CONTROLLER_HOST_PORT=8080
+    CONTROLLER_HA=false
     CONTROLLER_INSTANCES=2
     CONTROLLER_BLACKBOXFRACTION=0.10
     CONTROLLER_LOCALBOOKKEEPING=true
@@ -69,7 +70,9 @@ data:
     DB_PREFIX="openwhisk_kube_"
     DB_SPLIT_ACTIONS_AND_ACTIVATIONS=true
     DB_WHISK_ACTIONS=openwhisk_kube_whisks
+    DB_WHISK_ACTIONS_DDOC=whisks
     DB_WHISK_ACTIVATIONS=openwhisk_kube_activations
+    DB_WHISK_ACTIVATIONS_DDOC=whisks
     DB_WHISK_AUTHS=openwhisk_kube_subjects
 
     APIGW_AUTH_USER=""
