@@ -14,13 +14,13 @@ RUN yum update -y \
 # Clone our branch of OpenWhisk
 RUN git clone -b kube-container-openshift https://github.com/projectodd/incubator-openwhisk /openwhisk \
   && cd /openwhisk \
-  && git checkout 21da7e5 \
+  && git checkout f7bfe7e \
   && cd /
 
 # Clone the default OpenWhisk catalog
 RUN git clone https://github.com/apache/incubator-openwhisk-catalog.git /openwhisk-catalog \
   && cd /openwhisk-catalog \
-  && git checkout c8a1968 \
+  && git checkout 5414efc \
   && cd /
 
 ENV OPENWHISK_HOME /openwhisk
