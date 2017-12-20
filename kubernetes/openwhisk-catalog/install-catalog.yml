@@ -1,0 +1,28 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: install-catalog
+  namespace: openwhisk
+spec:
+  activeDeadlineSeconds: 600
+  template:
+    metadata:
+      name: install-catalog
+    spec:
+      containers:
+      - name: catalog
+        image: openwhisk/kube-openwhisk-catalog
+        env:
+          - name: "WHISK_CLI_VERSION"
+            value: "latest"
+          - name: "WHISK_AUTH"
+            valueFrom:
+              secretKeyRef:
+                name: whisk.auth
+                key: system
+          - name: "WHISK_API_HOST_NAME"
+            valueFrom:
+              configMapKeyRef:
+                name: whisk.ingress
+                key: api_host
+      restartPolicy: Never

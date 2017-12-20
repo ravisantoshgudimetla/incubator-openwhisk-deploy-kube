@@ -1,13 +1,8 @@
 #!/bin/bash
 
-set -x
-
-SCRIPTDIR=$(cd $(dirname "$0") && pwd)
-ROOTDIR="$SCRIPTDIR/../../"
-
-cd $ROOTDIR
-
-kubectl apply -f configure/openwhisk_kube_namespace.yml
+#################
+# Helper functions for verifying pod creation
+#################
 
 couchdbHealthCheck () {
   # wait for the pod to be created before getting the job name
@@ -16,16 +11,17 @@ couchdbHealthCheck () {
 
   PASSED=false
   TIMEOUT=0
-  until [ $TIMEOUT -eq 25 ]; do
+  until [ $TIMEOUT -eq 30 ]; do
     if [ -n "$(kubectl -n openwhisk logs $POD_NAME | grep "successfully setup and configured CouchDB v2.0")" ]; then
+      PASSED=true
       break
     fi
 
     let TIMEOUT=TIMEOUT+1
-    sleep 30
+    sleep 10
   done
 
-  if [ $TIMEOUT -eq 25 ]; then
+  if [ "$PASSED" = false ]; then
     echo "Failed to finish deploying CouchDB"
 
     kubectl -n openwhisk logs $POD_NAME
@@ -43,7 +39,7 @@ deploymentHealthCheck () {
 
   PASSED=false
   TIMEOUT=0
-  until $PASSED || [ $TIMEOUT -eq 25 ]; do
+  until $PASSED || [ $TIMEOUT -eq 30 ]; do
     KUBE_DEPLOY_STATUS=$(kubectl -n openwhisk get pods -o wide | grep "$1" | awk '{print $3}')
     if [ "$KUBE_DEPLOY_STATUS" == "Running" ]; then
       PASSED=true
@@ -53,7 +49,7 @@ deploymentHealthCheck () {
     kubectl get pods --all-namespaces -o wide --show-all
 
     let TIMEOUT=TIMEOUT+1
-    sleep 30
+    sleep 10
   done
 
   if [ "$PASSED" = false ]; then
@@ -74,7 +70,7 @@ statefulsetHealthCheck () {
 
   PASSED=false
   TIMEOUT=0
-  until $PASSED || [ $TIMEOUT -eq 25 ]; do
+  until $PASSED || [ $TIMEOUT -eq 30 ]; do
     KUBE_DEPLOY_STATUS=$(kubectl -n openwhisk get pods -o wide | grep "$1"-0 | awk '{print $3}')
     if [ "$KUBE_DEPLOY_STATUS" == "Running" ]; then
       PASSED=true
@@ -84,7 +80,7 @@ statefulsetHealthCheck () {
     kubectl get pods --all-namespaces -o wide --show-all
 
     let TIMEOUT=TIMEOUT+1
-    sleep 30
+    sleep 10
   done
 
   if [ "$PASSED" = false ]; then
@@ -98,7 +94,63 @@ statefulsetHealthCheck () {
 
 }
 
+jobHealthCheck () {
+  if [ -z "$1" ]; then
+    echo "Error, job health check called without a component parameter"
+    exit 1
+  fi
+
+  PASSED=false
+  TIMEOUT=0
+  until $PASSED || [ $TIMEOUT -eq 30 ]; do
+    KUBE_SUCCESSFUL_JOB=$(kubectl -n openwhisk get jobs -o wide | grep "$1" | awk '{print $3}')
+    if [ "$KUBE_SUCCESSFUL_JOB" == "1" ]; then
+      PASSED=true
+      break
+    fi
+
+    kubectl get jobs --all-namespaces -o wide --show-all
+
+    let TIMEOUT=TIMEOUT+1
+    sleep 10
+  done
+
+  if [ "$PASSED" = false ]; then
+    echo "Failed to finish running $1"
+
+    kubectl -n openwhisk logs jobs/$1
+    exit 1
+  fi
+
+  echo "$1 completed"
+}
+
+
+#################
+# Main body of script -- deploy OpenWhisk
+#################
+
+set -x
+
+SCRIPTDIR=$(cd $(dirname "$0") && pwd)
+ROOTDIR="$SCRIPTDIR/../../"
+
+cd $ROOTDIR
+
+# Label invoker nodes (needed for daemonset-based invoker deployment)
+echo "Labeling invoker node"
+kubectl label nodes --all openwhisk=invoker
+kubectl describe nodes
+
+# Initial cluster setup
+echo "Performing steps from cluster-setup"
+pushd kubernetes/cluster-setup
+  kubectl apply -f namespace.yml
+  kubectl -n openwhisk create secret generic whisk.auth --from-file=system=auth.whisk.system --from-file=guest=auth.guest
+popd
+
 # setup couchdb
+echo "Deploying couchdb"
 pushd kubernetes/couchdb
   docker build --tag dgrove/whisk_couchdb docker
   kubectl apply -f couchdb.yml
@@ -106,14 +158,8 @@ pushd kubernetes/couchdb
   couchdbHealthCheck
 popd
 
-# setup redis
-pushd kubernetes/redis
-  kubectl apply -f redis.yml
-
-  deploymentHealthCheck "redis"
-popd
-
-# setup redis
+# setup apigateway
+echo "Deploying apigateway"
 pushd kubernetes/apigateway
   kubectl apply -f apigateway.yml
 
@@ -121,6 +167,7 @@ pushd kubernetes/apigateway
 popd
 
 # setup zookeeper
+echo "Deploying zookeeper"
 pushd kubernetes/zookeeper
   kubectl apply -f zookeeper.yml
 
@@ -128,6 +175,7 @@ pushd kubernetes/zookeeper
 popd
 
 # setup kafka
+echo "Deploying kafka"
 pushd kubernetes/kafka
   kubectl apply -f kafka.yml
 
@@ -135,21 +183,15 @@ pushd kubernetes/kafka
 popd
 
 # setup the controller
+echo "Deploying controller"
 pushd kubernetes/controller
   kubectl apply -f controller.yml
 
   statefulsetHealthCheck "controller"
 popd
 
-# setup the invoker
-pushd kubernetes/invoker
-  kubectl apply -f invoker.yml
-
-  # wait until the invoker is ready
-  statefulsetHealthCheck "invoker"
-popd
-
 # setup nginx
+echo "Deploying nginx"
 pushd kubernetes/nginx
   ./certs.sh localhost
   kubectl -n openwhisk create configmap nginx --from-file=nginx.conf
@@ -157,7 +199,7 @@ pushd kubernetes/nginx
 
   # have seen this fail where nginx pod is applied but never created. Hard to know
   # why that is happening without having access to Kube component logs.
-  sleep 3
+  sleep 5
 
   kubectl apply -f nginx.yml
 
@@ -165,32 +207,46 @@ pushd kubernetes/nginx
   deploymentHealthCheck "nginx"
 popd
 
-AUTH_WSK_SECRET=789c46b1-71f6-4ed5-8c54-816aa4f8c502:abczO3xZCLrMN6v2BKK1dXYFpXlPkccOFqm12CdAsMgRU4VrNZ9lyGVCGuMDGIwP
-AUTH_GUEST=23bc46b1-71f6-4ed5-8c54-816aa4f8c502:123zO3xZCLrMN6v2BKK1dXYFpXlPkccOFqm12CdAsMgRU4VrNZ9lyGVCGuMDGIwP
-WSK_PORT=$(kubectl -n openwhisk describe service nginx | grep https-api | grep NodePort| awk '{print $3}' | cut -d'/' -f1)
-
-# download and setup the wsk cli from nginx
-wget --no-check-certificate https://localhost:$WSK_PORT/cli/go/download/linux/amd64/wsk
-chmod +x wsk
-sudo cp wsk /usr/local/bin/wsk
-
-./wsk property set --auth $AUTH_GUEST --apihost https://localhost:$WSK_PORT
-
-
-# setup the catalog
-pushd /tmp
-  git clone https://github.com/apache/incubator-openwhisk
-  export OPENWHISK_HOME=$PWD/incubator-openwhisk
-
-  git clone https://github.com/apache/incubator-openwhisk-catalog
-
-  pushd incubator-openwhisk-catalog/packages
-    export WHISK_CLI_PATH=/usr/local/bin/wsk
-
-    # This script currently has an issue where the cli path is the 4th argument
-    ./installCatalog.sh $AUTH_WSK_SECRET https://localhost:$WSK_PORT $WHISK_CLI_PATH
-  popd
+# configure Ingress and wsk CLI
+# We use a NodePort for Travis CI testing
+pushd kubernetes/ingress
+  WSK_PORT=$(kubectl -n openwhisk describe service nginx | grep https-api | grep NodePort| awk '{print $3}' | cut -d'/' -f1)
+  WSK_HOST=$(kubectl describe nodes | grep Hostname: | awk '{print $2}')
+  kubectl -n openwhisk create configmap whisk.ingress --from-literal=api_host=$WSK_HOST:$WSK_PORT
+  wsk property set --auth `cat ../cluster-setup/auth.guest` --apihost $WSK_HOST:$WSK_PORT
 popd
+
+# setup the invoker
+echo "Deploying invoker"
+pushd kubernetes/invoker
+  kubectl apply -f invoker.yml
+
+  # wait until the invoker is ready
+  deploymentHealthCheck "invoker"
+popd
+
+# install routemgmt
+echo "Installing routemgmt"
+pushd kubernetes/routemgmt
+  kubectl apply -f install-routemgmt.yml
+  jobHealthCheck "install-routemgmt"
+popd
+
+# install openwhisk-catalog
+echo "Installing catalog"
+pushd kubernetes/openwhisk-catalog
+  kubectl apply -f install-catalog.yml
+  jobHealthCheck "install-catalog"
+popd
+
+# list packages and actions now installed in /whisk.system
+wsk -i --auth `cat kubernetes/cluster-setup/auth.whisk.system` package list
+wsk -i --auth `cat kubernetes/cluster-setup/auth.whisk.system` action list
+
+
+#################
+# Sniff test: create and invoke a simple Hello world action
+#################
 
 # create wsk action
 cat > hello.js << EOL
@@ -199,12 +255,12 @@ function main() {
 }
 EOL
 
-./wsk -i action create hello hello.js
+wsk -i action create hello hello.js
 
 sleep 5
 
 # run the new hello world action
-RESULT=$(./wsk -i action invoke --blocking hello | grep "\"status\": \"success\"")
+RESULT=$(wsk -i action invoke --blocking hello | grep "\"status\": \"success\"")
 
 if [ -z "$RESULT" ]; then
   echo "FAILED! Could not invoked custom action"
@@ -217,4 +273,4 @@ if [ -z "$RESULT" ]; then
   exit 1
 fi
 
-echo "PASSED! Deployed openwhisk and invoked custom action"
+echo "PASSED! Deployed openwhisk and invoked Hello action"

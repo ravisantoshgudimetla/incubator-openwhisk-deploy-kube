@@ -4,10 +4,21 @@ Invoker
 # Deploying
 
 When deploying the Invoker, it needs to be deployed via a
-[StatefulSet](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/).
-This is because each Invoker instance needs to know the instance
-it is for the Kafka topic. The current deployment is a single
-Invoker instance and can be deployed with:
+[DaemonSet](https://kubernetes.io/docs/concepts/workloads/controllers/daemonset/).
+This is because there should only ever be at most 1 Invoker
+instance per Kube Node. To set these restrictions, it will be
+up to the Kubernetes deployment operator to properly apply
+the correct labels and taints to each required Kube node.
+
+With the defaults in the current `invoker.yml`, you can setup a
+node to run only Invoker pods with:
+
+```
+kubectl label nodes [node name] openwhisk=invoker
+$ kubectl label nodes 127.0.0.1 openwhisk=invoker
+```
+
+Once the invoker label is applied, you can create the invokers with:
 
 ```
 kubectl apply -f invoker.yml
@@ -24,38 +35,14 @@ that the Kubernetes host image is Ubuntu. During the deploy there could be an
 issue and if the Invoker fails to deploy, see the [Troubleshooting](#troubleshooting)
 section below.
 
-# Invoker Deployment Changes
-## Increase Invoker Count
-
-To increase the number of Invokers, edit the
-[replicas](https://github.com/apache/incubator-openwhisk-deploy-kube/tree/master/kubernetes/invoker/invoker.yml#L27)
-line. Secondly, you will need to update the
-[INVOKER_COUNT](https://github.com/apache/incubator-openwhisk-deploy-kube/tree/master/kubernetes/invoker/invoker.yml#L63-L64)
-to with the same replica count.
-
-## Deploying Invoker to Specific Kube Nodes
-
-To deploy an Invoker to specific Kube nodes, you will need to edit the
-[invoker.yml](https://github.com/apache/incubator-openwhisk-deploy-kube/tree/master/kubernetes/invoker/invoker.yml)
-file with Kubernetes [NodeSelectors](https://kubernetes.io/docs/concepts/configuration/assign-pod-node/).
-
 # Troubleshooting
-## Deploying to Minikube
+## No invokers are deployed
 
-When deploying the Invoker to [Minikube](https://kubernetes.io/docs/getting-started-guides/minikube/)
-you might need to edit the Invoker's Docker Api Version.
-This is because Minikube uses Docker version 1.11.x.
-To do this, you will need to add the following properties
-to the invoker.yml file.
+Verify that you actually have nodes with the label openwhisk=invoker.
 
-```
-env:
-  - name: "DOCKER_API_VERSION"
-    value: "1.23"
-```
 ## Kubernetes Host Linux Versions
 
-Unfortunitaly when Deploying OpenWhisk on Kubernetes it currently mounts some
+Unfortunately when Deploying OpenWhisk on Kubernetes it currently mounts some
 of the host OS files for the Invoker process and needs to make some assumptions.
 Because of this, some failures are known to happen on certain Linux versions,
 like CoreOs. If you see an error like:
