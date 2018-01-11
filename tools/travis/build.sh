@@ -11,8 +11,8 @@ couchdbHealthCheck () {
 
   PASSED=false
   TIMEOUT=0
-  until [ $TIMEOUT -eq 30 ]; do
-    if [ -n "$(kubectl -n openwhisk logs $POD_NAME | grep "successfully setup and configured CouchDB v2.0")" ]; then
+  until [ $TIMEOUT -eq 60 ]; do
+    if [ -n "$(kubectl -n openwhisk logs $POD_NAME | grep "successfully setup and configured CouchDB")" ]; then
       PASSED=true
       break
     fi
@@ -39,7 +39,7 @@ deploymentHealthCheck () {
 
   PASSED=false
   TIMEOUT=0
-  until $PASSED || [ $TIMEOUT -eq 30 ]; do
+  until $PASSED || [ $TIMEOUT -eq 60 ]; do
     KUBE_DEPLOY_STATUS=$(kubectl -n openwhisk get pods -o wide | grep "$1" | awk '{print $3}')
     if [ "$KUBE_DEPLOY_STATUS" == "Running" ]; then
       PASSED=true
@@ -70,7 +70,7 @@ statefulsetHealthCheck () {
 
   PASSED=false
   TIMEOUT=0
-  until $PASSED || [ $TIMEOUT -eq 30 ]; do
+  until $PASSED || [ $TIMEOUT -eq 60 ]; do
     KUBE_DEPLOY_STATUS=$(kubectl -n openwhisk get pods -o wide | grep "$1"-0 | awk '{print $3}')
     if [ "$KUBE_DEPLOY_STATUS" == "Running" ]; then
       PASSED=true
@@ -102,7 +102,7 @@ jobHealthCheck () {
 
   PASSED=false
   TIMEOUT=0
-  until $PASSED || [ $TIMEOUT -eq 30 ]; do
+  until $PASSED || [ $TIMEOUT -eq 60 ]; do
     KUBE_SUCCESSFUL_JOB=$(kubectl -n openwhisk get jobs -o wide | grep "$1" | awk '{print $3}')
     if [ "$KUBE_SUCCESSFUL_JOB" == "1" ]; then
       PASSED=true
@@ -146,13 +146,31 @@ kubectl describe nodes
 echo "Performing steps from cluster-setup"
 pushd kubernetes/cluster-setup
   kubectl apply -f namespace.yml
+  kubectl apply -f services.yml
+  kubectl -n openwhisk create cm whisk.config --from-env-file=config.env
+  kubectl -n openwhisk create cm whisk.runtimes --from-file=runtimes=runtimes.json
+  kubectl -n openwhisk create cm whisk.limits --from-env-file=limits.env
   kubectl -n openwhisk create secret generic whisk.auth --from-file=system=auth.whisk.system --from-file=guest=auth.guest
+popd
+
+# configure Ingress and wsk CLI
+# We use the NodePorts for nginx and apigateway services for Travis CI testing
+pushd kubernetes/ingress
+  WSK_PORT=$(kubectl -n openwhisk describe service nginx | grep https-api | grep NodePort| awk '{print $3}' | cut -d'/' -f1)
+  APIGW_PORT=$(kubectl -n openwhisk describe service apigateway | grep mgmt | grep NodePort| awk '{print $3}' | cut -d'/' -f1)
+  WSK_HOST=$(kubectl describe nodes | grep Hostname: | awk '{print $2}')
+  if [ "$WSK_HOST" = "minikube" ]; then
+      WSK_HOST=$(minikube ip)
+  fi
+  kubectl -n openwhisk create configmap whisk.ingress --from-literal=api_host=$WSK_HOST:$WSK_PORT --from-literal=apigw_url=http://$WSK_HOST:$APIGW_PORT
+  wsk property set --auth `cat ../cluster-setup/auth.guest` --apihost $WSK_HOST:$WSK_PORT
 popd
 
 # setup couchdb
 echo "Deploying couchdb"
 pushd kubernetes/couchdb
-  docker build --tag dgrove/whisk_couchdb docker
+  kubectl -n openwhisk create secret generic db.auth --from-literal=db_username=whisk_admin --from-literal=db_password=some_passw0rd
+  kubectl -n openwhisk create configmap db.config --from-literal=db_protocol=http --from-literal=db_provider=CouchDB --from-literal=db_whisk_activations=test_activations --from-literal=db_whisk_actions=test_whisks --from-literal=db_whisk_auths=test_subjects --from-literal=db_prefix=test_
   kubectl apply -f couchdb.yml
 
   couchdbHealthCheck
@@ -185,9 +203,20 @@ popd
 # setup the controller
 echo "Deploying controller"
 pushd kubernetes/controller
+  kubectl -n openwhisk create cm controller.config --from-env-file=controller.env
   kubectl apply -f controller.yml
 
   statefulsetHealthCheck "controller"
+popd
+
+# setup the invoker
+echo "Deploying invoker"
+pushd kubernetes/invoker
+  kubectl -n openwhisk create cm invoker.config --from-env-file=invoker.env
+  kubectl apply -f invoker.yml
+
+  # wait until the invoker is ready
+  deploymentHealthCheck "invoker"
 popd
 
 # setup nginx
@@ -205,24 +234,6 @@ pushd kubernetes/nginx
 
   # wait until nginx is ready
   deploymentHealthCheck "nginx"
-popd
-
-# configure Ingress and wsk CLI
-# We use a NodePort for Travis CI testing
-pushd kubernetes/ingress
-  WSK_PORT=$(kubectl -n openwhisk describe service nginx | grep https-api | grep NodePort| awk '{print $3}' | cut -d'/' -f1)
-  WSK_HOST=$(kubectl describe nodes | grep Hostname: | awk '{print $2}')
-  kubectl -n openwhisk create configmap whisk.ingress --from-literal=api_host=$WSK_HOST:$WSK_PORT
-  wsk property set --auth `cat ../cluster-setup/auth.guest` --apihost $WSK_HOST:$WSK_PORT
-popd
-
-# setup the invoker
-echo "Deploying invoker"
-pushd kubernetes/invoker
-  kubectl apply -f invoker.yml
-
-  # wait until the invoker is ready
-  deploymentHealthCheck "invoker"
 popd
 
 # install routemgmt
@@ -269,7 +280,7 @@ if [ -z "$RESULT" ]; then
   kubectl -n openwhisk logs controller-0
 
   echo " ----------------------------- invoker logs ---------------------------"
-  kubectl -n openwhisk logs invoker-0
+  kubectl -n openwhisk logs -l name=invoker
   exit 1
 fi
 

@@ -15,15 +15,6 @@ spec:
       restartPolicy: Always
       nodeSelector:
         openwhisk: "invoker"
-      tolerations:
-        - key: "dedicated"
-          value: "invoker"
-          effect: "NoSchedule"
-          operator: "Equal"
-        - key: "dedicated"
-          value: "invoker"
-          effect: "NoExecute"
-          operator: "Equal"
 
       volumes:
       - name: cgroup
@@ -42,101 +33,26 @@ spec:
         hostPath:
           path: "/usr/lib/x86_64-linux-gnu/libapparmor.so.1"
 
+      initContainers:
+      - name: docker-pull-runtimes
+        imagePullPolicy: Always
+        image: openwhisk/kube-docker-pull
+        volumeMounts:
+        - name: dockersock
+          mountPath: "/var/run/docker.sock"
+        env:
+          # action runtimes
+          - name: "RUNTIMES_MANIFEST"
+            valueFrom:
+              configMapKeyRef:
+                name: whisk.runtimes
+                key: runtimes
+
       containers:
       - name: invoker
         imagePullPolicy: Always
         image: openwhisk/invoker
         command: [ "/bin/bash", "-c", "COMPONENT_NAME=$(hostname | cut -d'-' -f2) /init.sh" ]
-        env:
-          - name: "PORT"
-            value: "8080"
-          - name: "SELF_DOCKER_ENDPOINT"
-            value: "localhost"
-          - name: "SERVICE_CHECK_HTTP"
-            value: "/ping"
-          - name: "SERVICE_CHECK_TIMEOUT"
-            value: "2s"
-          - name: "SERVICE_CHECK_INTERVAL"
-            value: "15s"
-          - name: "WHISK_API_HOST_NAME"
-            valueFrom:
-              configMapKeyRef:
-                name: whisk.ingress
-                key: api_host
-          - name: "WHISK_VERSION_BUILDNO"
-            value: "latest"
-          - name: "INVOKER_CONTAINER_NETWORK"
-            value: "bridge"
-          - name: "INVOKER_USE_RUNC"
-            value: "false"
-
-          # Properties for invoker image
-          - name: "DOCKER_IMAGE_PREFIX"
-            value: "openwhisk"
-          - name: "DOCKER_IMAGE_TAG"
-            value: "latest"
-          - name: "DOCKER_REGISTRY"
-            value: ""
-
-          # Java options
-          - name: "JAVA_OPTS"
-            value: "-Xmx2g"
-
-          # Invoker options
-          - name: "INVOKER_OPTS"
-            value: ""
-
-          # Kafka properties
-          - name: "KAFKA_HOSTS"
-            value: "$(KAFKA_SERVICE_HOST):$(KAFKA_SERVICE_PORT_KAFKA)"
-
-          # zookeeper info
-          - name: "ZOOKEEPER_HOSTS"
-            value: "$(ZOOKEEPER_SERVICE_HOST):$(ZOOKEEPER_SERVICE_PORT_ZOOKEEPER)"
-
-          # This property can change since it is generated via Ansible GroupVars
-          - name: "RUNTIMES_MANIFEST"
-            value: '{ "defaultImagePrefix": "openwhisk", "defaultImageTag": "latest", "runtimes": { "nodejs": [ { "kind": "nodejs", "image": { "name": "nodejsaction" }, "deprecated": true }, { "kind": "nodejs:6", "default": true, "image": { "name": "nodejs6action" }, "deprecated": false } ], "python": [ { "kind": "python", "image": { "name": "python2action" }, "deprecated": false }, { "kind": "python:2", "default": true, "image": { "name": "python2action" }, "deprecated": false }, { "kind": "python:3", "image": { "name": "python3action" }, "deprecated": false } ], "swift": [ { "kind": "swift", "image": { "name": "swiftaction" }, "deprecated": true }, { "kind": "swift:3", "image": { "name": "swift3action" }, "deprecated": true }, { "kind": "swift:3.1.1", "default": true, "image": { "name": "action-swift-v3.1.1" }, "deprecated": false } ], "java": [ { "kind": "java", "default": true, "image": { "name": "java8action" }, "deprecated": false, "attached": { "attachmentName": "jarfile", "attachmentType": "application/java-archive" }, "sentinelledLogs": false, "requireMain": true } ] }, "blackboxes": [ { "name": "dockerskeleton" } ] }'
-
-          # Default to empty logs dir. This is because logs should go to stdout on kube
-          - name: "WHISK_LOGS_DIR"
-            value: ""
-
-          # this version is the day it is deployed,
-          - name:  "WHISK_VERSION_DATE"
-            value: "2017-01-01T00:00:00Z"
-
-          # properties for DB connection
-          - name: "DB_USERNAME"
-            value: "whisk_admin"
-          - name: "DB_PASSWORD"
-            value: "some_passw0rd"
-          - name:  "DB_PROTOCOL"
-            value: "http"
-          - name: "DB_HOST"
-            value: "$(COUCHDB_SERVICE_HOST)"
-          - name: "DB_PORT"
-            value: "$(COUCHDB_SERVICE_PORT_COUCHDB)"
-          - name: "DB_PROVIDER"
-            value: "CouchDB"
-          - name: "DB_WHISK_ACTIONS_DDOC"
-            value: "whisks.v2"
-          - name: "DB_WHISK_ACTIVATIONS_DDOC"
-            value: "whisks.v2"
-          - name: "DB_WHISK_ACTIVATIONS_FILTER_DDOC"
-            value: "whisks-filters.v2"
-          - name: "DB_WHISK_ACTIVATIONS"
-            value: "test_activations"
-          - name: "DB_WHISK_ACTIONS"
-            value: "test_whisks"
-          - name: "DB_WHISK_AUTHS"
-            value: "test_subjects"
-
-          # Name for the pod can be the hostname of the Kube node
-          - name: "INVOKER_NAME"
-            valueFrom:
-              fieldRef:
-                fieldPath: spec.nodeName
         ports:
         - name: invoker
           containerPort: 8080
@@ -151,11 +67,122 @@ spec:
           mountPath: "/containers"
         - name: apparmor
           mountPath: "/usr/lib/x86_64-linux-gnu/libapparmor.so.1"
-        lifecycle:
-          postStart:
-            exec:
-              command:
-              - "/bin/bash"
-              - "-c"
-              - "docker pull openwhisk/nodejsactionbase && docker pull openwhisk/nodejs6action && docker pull openwhisk/dockerskeleton && docker pull openwhisk/python2action && docker pull openwhisk/python3action && docker pull openwhisk/action-swift-v3.1.1 && docker pull openwhisk/swift3action && docker pull openwhisk/java8action"
+        env:
+          - name: "PORT"
+            value: "8080"
 
+          # Invoker name is name of the Kube node when using DaemonSet
+          - name: "INVOKER_NAME"
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
+
+          - name: "WHISK_API_HOST_NAME"
+            valueFrom:
+              configMapKeyRef:
+                name: whisk.ingress
+                key: api_host
+
+          # Docker-related options
+          - name: "INVOKER_CONTAINER_NETWORK"
+            valueFrom:
+              configMapKeyRef:
+                name: invoker.config
+                key: invoker_container_network
+          - name: "INVOKER_USE_RUNC"
+            valueFrom:
+              configMapKeyRef:
+                name: invoker.config
+                key: invoker_use_runc
+          - name: "DOCKER_IMAGE_PREFIX"
+            valueFrom:
+              configMapKeyRef:
+                name: invoker.config
+                key: docker_image_prefix
+          - name: "DOCKER_IMAGE_TAG"
+            valueFrom:
+              configMapKeyRef:
+                name: invoker.config
+                key: docker_image_tag
+          - name: "DOCKER_REGISTRY"
+            valueFrom:
+              configMapKeyRef:
+                name: invoker.config
+                key: docker_registry
+
+          # action runtimes
+          - name: "RUNTIMES_MANIFEST"
+            valueFrom:
+              configMapKeyRef:
+                name: whisk.runtimes
+                key: runtimes
+
+          # extra JVM arguments
+          - name: "JAVA_OPTS"
+            valueFrom:
+              configMapKeyRef:
+                name: invoker.config
+                key: java_opts
+
+          # extra Invoker arguments
+          - name: "INVOKER_OPTS"
+            valueFrom:
+              configMapKeyRef:
+                name: invoker.config
+                key: invoker_opts
+
+          # Recommend using "" because logs should go to stdout on kube
+          - name: "WHISK_LOGS_DIR"
+            valueFrom:
+              configMapKeyRef:
+                name: invoker.config
+                key: invoker_logs_dir
+
+          # properties for Kafka connection
+          - name: "KAFKA_HOSTS"
+            value: "$(KAFKA_SERVICE_HOST):$(KAFKA_SERVICE_PORT_KAFKA)"
+
+          # properties for zookeeper connection
+          - name: "ZOOKEEPER_HOSTS"
+            value: "$(ZOOKEEPER_SERVICE_HOST):$(ZOOKEEPER_SERVICE_PORT_ZOOKEEPER)"
+
+          # properties for DB connection
+          - name: "DB_USERNAME"
+            valueFrom:
+              secretKeyRef:
+                name: db.auth
+                key: db_username
+          - name: "DB_PASSWORD"
+            valueFrom:
+              secretKeyRef:
+                name: db.auth
+                key: db_password
+          - name:  "DB_PROTOCOL"
+            valueFrom:
+              configMapKeyRef:
+                name: db.config
+                key: db_protocol
+          - name: "DB_HOST"
+            value: "$(COUCHDB_SERVICE_HOST)"
+          - name: "DB_PORT"
+            value: "$(COUCHDB_SERVICE_PORT_COUCHDB)"
+          - name: "DB_PROVIDER"
+            valueFrom:
+              configMapKeyRef:
+                name: db.config
+                key: db_provider
+          - name: "DB_WHISK_ACTIVATIONS"
+            valueFrom:
+              configMapKeyRef:
+                name: db.config
+                key: db_whisk_activations
+          - name: "DB_WHISK_ACTIONS"
+            valueFrom:
+              configMapKeyRef:
+                name: db.config
+                key: db_whisk_actions
+          - name: "DB_WHISK_AUTHS"
+            valueFrom:
+              configMapKeyRef:
+                name: db.config
+                key: db_whisk_auths

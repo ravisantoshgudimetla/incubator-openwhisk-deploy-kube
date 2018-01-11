@@ -29,7 +29,7 @@ Several requirements must be met for OpenWhisk to deploy on Kubernetes.
 ## Using Minikube
 
 For local development and testing, we recommend using Minikube version 0.23+
-with the docker network in promiscuous mode. Our Travis CI testing using Minikube 0.23.0.
+with the docker network in promiscuous mode. Our Travis CI testing uses Minikube 0.23.0.
 Take a look at these [instructions](/docs/setting_up_minikube/README.md).
 
 ## Using a Kubernetes cluster from a cloud provider
@@ -38,9 +38,17 @@ You can also provision a Kubernetes cluster from a cloud provider, subject to th
 
 # Configuring OpenWhisk
 
+The first time you deploy OpenWhisk on Kubernetes, we recommend
+following the steps below manually so you can inspect the results and
+debug your setup.  After you are confident that OpenWhisk deploys
+smoothly on your cluster, you might find it useful to drive your
+deployments using the script [build.sh](tools/travis/build.sh) that we
+use to deploy OpenWhisk on Kubernetes for our Travis CI testing.
+
 ## Initial Cluster Configuration
 
 * Follow the steps for initial [Cluster Setup](kubernetes/cluster-setup/README.md)
+* Configure your [Ingresses](kubernetes/ingress/README.md), including configuring the wsk CLI.
 
 ## Configure or Deploy CouchDB
 
@@ -50,6 +58,8 @@ Do one of the following:
   within the Kubernetes cluster.
 * For a production level CouchDB instance, take a look at the main
   OpenWhisk [documentation for configuring CouchDB](https://github.com/apache/incubator-openwhisk/blob/master/tools/db/README.md).
+  You will need to define the db.auth secret and db.config configmap as described in the [CouchDB README.md](kubernetes/couchdb/README.md)
+  to match your database deployment.
 
 ## Deploy Remaining Components
 
@@ -62,11 +72,13 @@ directory tree. Follow the instructions for each step in order.
 * Deploy [Zookeeper](kubernetes/zookeeper/README.md)
 * Deploy [Kafka](kubernetes/kafka/README.md)
 * Deploy [Controller](kubernetes/controller/README.md)
-* Deploy [Nginx](kubernetes/nginx/README.md)
-* Deploy [Ingress](kubernetes/ingress/README.md), including configuring the wsk CLI.
 * Deploy [Invoker](kubernetes/invoker/README.md)
-* Deploy [RouteMgmt](kubernetes/routemgmt/README.md)
-* Deploy [Package Catalog](kubernetes/openwhisk-catalog/README.md)
+* Deploy [Nginx](kubernetes/nginx/README.md)
+
+## Install system actions and the openwhisk catalog
+
+* Install [RouteMgmt](kubernetes/routemgmt/README.md)
+* Install [Package Catalog](kubernetes/openwhisk-catalog/README.md)
 
 ## Verify
 
@@ -78,10 +90,11 @@ to define and invoke a sample OpenWhisk action in your favorite programming lang
 
 At some point there might be a need to cleanup the Kubernetes environment.
 For this, we want to delete all the OpenWhisk deployments, services, jobs
-and whatever else might be there. We provide a script to do this:
+and whatever else might be there. This is easily accomplished by
+deleting the `openwhisk` namespace:
 
 ```
-./tools/admin/cleanup.sh
+kubectl delete namespace openwhisk
 ```
 
 # Issues
