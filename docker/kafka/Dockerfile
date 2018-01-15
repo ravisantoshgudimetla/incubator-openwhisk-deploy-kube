@@ -1,12 +1,5 @@
-FROM ches/kafka:0.10.2.1
+FROM wurstmeister/kafka:0.11.0.1
 
 # Fix perms for Openshift
-USER root
-RUN chgrp -R 0 /kafka \
-  && chmod -R g+rwX /kafka
-USER kafka
-
-COPY init.sh /init.sh
-COPY server.properties /server.properties
-
-CMD ["/init.sh"]
+RUN chgrp -R 0 /opt/kafka \
+  && chmod -R g+rwX /opt/kafka

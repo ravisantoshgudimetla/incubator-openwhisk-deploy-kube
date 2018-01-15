@@ -20,7 +20,7 @@ metadata:
 data:
   init: |
     source /openwhisk_config/env
-    exec /init.sh
+    exec start-kafka.sh
 ---
 apiVersion: extensions/v1beta1
 kind: Deployment
@@ -55,6 +55,26 @@ spec:
         ports:
         - name: kafka
           containerPort: 9092
+        env:
+        # - name: "KAFKA_BROKER_ID"
+        #   value: "0"
+        # - name: "KAFKA_ADVERTISED_HOST_NAME"
+        #   value: "$(KAFKA_SERVICE_HOST)"
+        # - name: "KAFKA_ADVERTISED_PORT"
+        #   value: "$(KAFKA_SERVICE_PORT_KAFKA)"
+        # - name: "KAFKA_HOST_NAME"
+        #   valueFrom:
+        #     fieldRef:
+        #       fieldPath: status.podIP
+        # - name: "KAFKA_PORT"
+        #   value: "$(KAFKA_SERVICE_PORT_KAFKA)"
+
+        # zookeeper info
+        - name: "KAFKA_ZOOKEEPER_CONNECT"
+          value: "$(ZOOKEEPER_SERVICE_HOST):$(ZOOKEEPER_SERVICE_PORT_ZOOKEEPER)"
+        - name: "KAFKA_LOG_DIRS"
+          value: "/data/logs"
+
         volumeMounts:
           - name: kafka-logs
             mountPath: "/data"
