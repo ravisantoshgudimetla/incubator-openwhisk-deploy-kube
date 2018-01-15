@@ -9,10 +9,10 @@ deploying OpenWhisk to both
 
 ```
 eval $(minishift docker-env)
-docker build --tag projectodd/whisk_couchdb:openshift-latest kubernetes/couchdb/docker
-docker build --tag projectodd/whisk_zookeeper:openshift-latest kubernetes/zookeeper/docker
-docker build --tag projectodd/whisk_kafka:openshift-latest kubernetes/kafka/docker
-docker build --tag projectodd/whisk_nginx:openshift-latest kubernetes/nginx/docker
+docker build --tag projectodd/whisk_couchdb:openshift-latest docker/couchdb
+docker build --tag projectodd/whisk_zookeeper:openshift-latest docker/zookeeper
+docker build --tag projectodd/whisk_kafka:openshift-latest docker/kafka
+docker build --tag projectodd/whisk_nginx:openshift-latest docker/nginx
 docker build --tag projectodd/whisk_catalog:openshift-latest docker/catalog
 docker build --tag projectodd/whisk_alarms:openshift-latest docker/alarms
 ```

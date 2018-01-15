@@ -25,7 +25,7 @@ RUN pip install -U pyopenssl
 
 RUN git clone -b kube-container-openshift https://github.com/projectodd/incubator-openwhisk /openwhisk \
   && cd /openwhisk \
-  && git checkout cc02264 \
+  && git checkout 406766f \
   && cd /
 
 RUN chgrp -R 0 /openwhisk && \
