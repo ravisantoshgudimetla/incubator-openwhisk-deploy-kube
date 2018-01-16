@@ -1,0 +1,87 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: couchdb
+  labels:
+    name: couchdb
+spec:
+  selector:
+    name: couchdb
+  ports:
+    - port: 5984
+      targetPort: 5984
+      name: couchdb
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: db.config
+data:
+  db_prefix: test_
+  db_protocol: http
+  db_provider: CouchDB
+  db_whisk_actions: test_whisks
+  db_whisk_activations: test_activations
+  db_whisk_auths: test_subjects
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: couchdb
+  labels:
+    name: couchdb
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        name: couchdb
+    spec:
+      restartPolicy: Always
+      volumes:
+      - name: couchdb-data
+        emptyDir: {}
+      containers:
+      - name: couchdb
+        imagePullPolicy: IfNotPresent
+        image: projectodd/whisk_couchdb:openshift-latest
+        command: ["/init.sh"]
+        ports:
+        - name: couchdb
+          containerPort: 5984
+        env:
+        - name: "DB_PREFIX"
+          valueFrom:
+            configMapKeyRef:
+              name: db.config
+              key: db_prefix
+        - name: "DB_HOST"
+          value: "127.0.0.1"
+        - name: "COUCHDB_USER"
+          valueFrom:
+            secretKeyRef:
+              name: db.auth
+              key: db_username
+        - name: "COUCHDB_PASSWORD"
+          valueFrom:
+            secretKeyRef:
+              name: db.auth
+              key: db_password
+        - name: "DB_PORT"
+          value: "5984"
+        - name: "NODENAME"
+          value: "couchdb0"
+        volumeMounts:
+        - name: couchdb-data
+          mountPath: "/opt/couchdb/data"
+        readinessProbe:
+          httpGet:
+            port: 5984
+            # Tempting to say "/$(DB_PREFIX)_activations", but probe runs
+            # externally, therefore can't access the container environment...
+            path: "/test_activations"
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          failureThreshold: 10
+          timeoutSeconds: 1
