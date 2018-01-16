@@ -1,0 +1,235 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: invoker.config
+data:
+  docker_image_prefix: projectodd
+  docker_image_tag: openshift-latest
+  docker_registry: ""
+  invoker_container_dns: ""
+  invoker_container_network: bridge
+  invoker_logs_dir: ""
+  invoker_opts: "-Dwhisk.spi.ContainerFactoryProvider=whisk.core.containerpool.kubernetes.KubernetesContainerFactoryProvider"
+  invoker_use_runc: "false"
+  java_opts: -Xmx2g
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: invoker
+data:
+  init: |
+    export ORDINAL=$(hostname | cut -d'-' -f2)
+    echo "Waiting for controller to be available"
+    until $(curl --output /dev/null --silent --head --fail http://controller:8080/ping); do printf '.'; sleep 1; done
+    export COMPONENT_NAME=${ORDINAL}
+    export TOKEN="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)"
+    export NAMESPACE="$(cat /run/secrets/kubernetes.io/serviceaccount/namespace)"
+    export APIGW_HOST=$(curl -s --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H "Authorization: Bearer ${TOKEN}" "https://${KUBERNETES_SERVICE_HOST}:${KUBERNETES_SERVICE_PORT}/oapi/v1/namespaces/${NAMESPACE}/routes/openwhisk?pretty=true" | grep '"host":' | head -n 1 | awk -F '"' '{print $4}')
+    export APIGW_HOST_V2=${APIGW_HOST}
+    export WHISK_API_HOST_NAME=${APIGW_HOST}
+    exec /init.sh
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: openwhisk
+---
+apiVersion: v1
+kind: RoleBinding
+metadata:
+  name: openwhisk
+roleRef:
+  name: edit
+subjects:
+  - kind: ServiceAccount
+    name: openwhisk
+---
+apiVersion: apps/v1beta1
+kind: StatefulSet
+metadata:
+  name: invoker
+  labels:
+    name: invoker
+spec:
+  replicas: 1
+  serviceName: "invoker"
+  template:
+    metadata:
+      labels:
+        name: invoker
+    spec:
+      restartPolicy: Always
+      volumes:
+      - name: invoker-config
+        configMap:
+          name: invoker
+      serviceAccountName: openwhisk
+
+      containers:
+      - name: invoker
+        imagePullPolicy: IfNotPresent
+        image: projectodd/invoker:openshift-latest
+        command: [ "/bin/bash", "-o", "allexport", "/invoker_config/init" ]
+        ports:
+        - name: invoker
+          containerPort: 8080
+        volumeMounts:
+        - name: invoker-config
+          mountPath: "/invoker_config"
+        env:
+          - name: "PORT"
+            value: "8080"
+
+          # Invoker name is name of the Kube node when using DaemonSet
+          - name: "INVOKER_NAME"
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
+
+          # Docker-related options
+          - name: "INVOKER_CONTAINER_NETWORK"
+            valueFrom:
+              configMapKeyRef:
+                name: invoker.config
+                key: invoker_container_network
+          - name: "INVOKER_CONTAINER_DNS"
+            valueFrom:
+              configMapKeyRef:
+                name: invoker.config
+                key: invoker_container_dns
+          - name: "INVOKER_USE_RUNC"
+            valueFrom:
+              configMapKeyRef:
+                name: invoker.config
+                key: invoker_use_runc
+          - name: "DOCKER_IMAGE_PREFIX"
+            valueFrom:
+              configMapKeyRef:
+                name: invoker.config
+                key: docker_image_prefix
+          - name: "DOCKER_IMAGE_TAG"
+            valueFrom:
+              configMapKeyRef:
+                name: invoker.config
+                key: docker_image_tag
+          - name: "DOCKER_REGISTRY"
+            valueFrom:
+              configMapKeyRef:
+                name: invoker.config
+                key: docker_registry
+
+          # action runtimes
+          - name: "RUNTIMES_MANIFEST"
+            valueFrom:
+              configMapKeyRef:
+                name: whisk.runtimes
+                key: runtimes
+
+          # extra JVM arguments
+          - name: "JAVA_OPTS"
+            valueFrom:
+              configMapKeyRef:
+                name: invoker.config
+                key: java_opts
+
+          # extra Invoker arguments
+          - name: "INVOKER_OPTS"
+            valueFrom:
+              configMapKeyRef:
+                name: invoker.config
+                key: invoker_opts
+
+          # Recommend using "" because logs should go to stdout on kube
+          - name: "WHISK_LOGS_DIR"
+            valueFrom:
+              configMapKeyRef:
+                name: invoker.config
+                key: invoker_logs_dir
+
+          # properties for Kafka connection
+          - name: "KAFKA_HOSTS"
+            value: "$(KAFKA_SERVICE_HOST):$(KAFKA_SERVICE_PORT_KAFKA)"
+
+          # properties for zookeeper connection
+          - name: "ZOOKEEPER_HOSTS"
+            value: "$(ZOOKEEPER_SERVICE_HOST):$(ZOOKEEPER_SERVICE_PORT_ZOOKEEPER)"
+
+          # properties for DB connection
+          - name: "DB_USERNAME"
+            valueFrom:
+              secretKeyRef:
+                name: db.auth
+                key: db_username
+          - name: "DB_PASSWORD"
+            valueFrom:
+              secretKeyRef:
+                name: db.auth
+                key: db_password
+          - name:  "DB_PROTOCOL"
+            valueFrom:
+              configMapKeyRef:
+                name: db.config
+                key: db_protocol
+          - name: "DB_HOST"
+            value: "$(COUCHDB_SERVICE_HOST)"
+          - name: "DB_PORT"
+            value: "$(COUCHDB_SERVICE_PORT_COUCHDB)"
+          - name: "DB_PROVIDER"
+            valueFrom:
+              configMapKeyRef:
+                name: db.config
+                key: db_provider
+          - name: "DB_WHISK_ACTIVATIONS"
+            valueFrom:
+              configMapKeyRef:
+                name: db.config
+                key: db_whisk_activations
+          - name: "DB_WHISK_ACTIONS"
+            valueFrom:
+              configMapKeyRef:
+                name: db.config
+                key: db_whisk_actions
+          - name: "DB_WHISK_AUTHS"
+            valueFrom:
+              configMapKeyRef:
+                name: db.config
+                key: db_whisk_auths
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: preload-openwhisk-runtimes
+  labels:
+    name: preload-openwhisk-runtimes
+spec:
+  completions: 1
+  serviceAccountName: openwhisk
+  template:
+    metadata:
+      labels:
+        name: preload-openwhisk-runtimes
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: preload-openwhisk-nodejs6
+        image: projectodd/nodejs6action:openshift-latest
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/sh", "-c", "echo", "success"]
+      - name: preload-openwhisk-python2
+        image: projectodd/python2action:openshift-latest
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/sh", "-c", "echo", "success"]
+      - name: preload-openwhisk-python3
+        image: projectodd/python3action:openshift-latest
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/sh", "-c", "echo", "success"]
+      - name: preload-openwhisk-swift3
+        image: projectodd/swift3action:openshift-latest
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/sh", "-c", "echo", "success"]
+      - name: preload-openwhisk-java8
+        image: projectodd/java8action:openshift-latest
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/sh", "-c", "echo", "success"]
