@@ -23,10 +23,7 @@ RUN pip install markupsafe
 RUN pip install ansible==2.3.0.0
 RUN pip install -U pyopenssl
 
-RUN git clone -b kube-container-openshift https://github.com/projectodd/incubator-openwhisk /openwhisk \
-  && cd /openwhisk \
-  && git checkout 406766f \
-  && cd /
+RUN git clone -b kube-container-openshift https://github.com/projectodd/incubator-openwhisk /openwhisk
 
 RUN chgrp -R 0 /openwhisk && \
     chmod -R g=u /openwhisk && \
