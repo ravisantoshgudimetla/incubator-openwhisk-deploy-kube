@@ -92,3 +92,32 @@ oc create secret generic whisk.auth \
     --from-literal=system="$(cat /proc/sys/kernel/random/uuid):$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 64 | head -n 1)" \
     --from-literal=guest="$(cat /proc/sys/kernel/random/uuid):$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 64 | head -n 1)"
 ```
+
+# Alarms
+
+The
+[alarms](https://github.com/apache/incubator-openwhisk-package-alarms)
+package is not technically a part of the default OpenWhisk catalog,
+but since it's a simple way of experimenting with triggers and rules,
+we include a resource specification for it here. Once you have
+OpenWhisk running, adding the alarms package is simple:
+
+```
+oc create -f openshift/extras/alarms.yml
+```
+
+Once the `alarmprovider` pod enters the Running state, try the
+following:
+
+```
+wsk -i trigger create every-5-seconds \
+    --feed  /whisk.system/alarms/alarm \
+    --param cron '*/5 * * * * *' \
+    --param maxTriggers 25 \
+    --param trigger_payload "{\"name\":\"Odin\",\"place\":\"Asgard\"}"
+wsk -i rule create \
+    invoke-periodically \
+    every-5-seconds \
+    /whisk.system/samples/greeting
+wsk -i activation poll
+```
