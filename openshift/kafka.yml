@@ -36,7 +36,7 @@ spec:
       initContainers:
       - name: wait-for-zookeeper
         image: busybox
-        command: ['sh', '-cu', 'nc -vz $ZOOKEEPER_SERVICE_HOST $ZOOKEEPER_SERVICE_PORT']
+        command: ['sh', '-cu', 'nc -v -w 1 -z $ZOOKEEPER_SERVICE_HOST $ZOOKEEPER_SERVICE_PORT']
 
       containers:
       - name: kafka

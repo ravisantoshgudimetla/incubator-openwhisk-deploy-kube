@@ -62,6 +62,9 @@ spec:
         - name: alarmprovider-config
           mountPath: "/alarmprovider_config"
       initContainers:
+      - name: wait-for-couchdb
+        image: busybox
+        command: ['sh', '-cu', 'echo "$COUCHDB_SERVICE_HOST"']
       - name: install-alarms-catalog
         imagePullPolicy: IfNotPresent
         image: projectodd/whisk_alarms:openshift-latest
