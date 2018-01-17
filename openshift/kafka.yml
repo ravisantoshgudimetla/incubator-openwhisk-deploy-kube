@@ -32,6 +32,12 @@ spec:
         emptyDir: {}
       - name: kafka-java-logs
         emptyDir: {}
+
+      initContainers:
+      - name: wait-for-zookeeper
+        image: busybox
+        command: ['sh', '-cu', 'nc -vz $ZOOKEEPER_SERVICE_HOST $ZOOKEEPER_SERVICE_PORT']
+
       containers:
       - name: kafka
         imagePullPolicy: IfNotPresent
