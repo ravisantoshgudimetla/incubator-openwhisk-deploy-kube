@@ -12,6 +12,11 @@ env:
   - KUBE_FLAVOR=openshift
   - KUBE_FLAVOR=kube
 
+matrix:
+  include:
+  - env: KUBE_FLAVOR=openshift OPENSHIFT_VERSION=3.7.0-alpha.1 OPENSHIFT_COMMIT=fdbd3dc
+  - env: KUBE_FLAVOR=openshift OPENSHIFT_VERSION=3.7.0-rc.0 OPENSHIFT_COMMIT=e92d5c5
+
 services:
   - docker
 
