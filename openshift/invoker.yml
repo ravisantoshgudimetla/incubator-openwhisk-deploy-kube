@@ -67,6 +67,11 @@ spec:
           name: invoker
       serviceAccountName: openwhisk
 
+      initContainers:
+      - name: wait-for-services
+        image: busybox
+        command: ['sh', '-cu', 'echo "$COUCHDB_SERVICE_HOST $ZOOKEEPER_SERVICE_HOST $KAFKA_SERVICE_HOST"']
+
       containers:
       - name: invoker
         imagePullPolicy: IfNotPresent
