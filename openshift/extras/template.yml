@@ -342,7 +342,6 @@ objects:
   kind: Job
   metadata:
     name: install-catalog
-    namespace: openwhisk
   spec:
     activeDeadlineSeconds: 600
     template:
