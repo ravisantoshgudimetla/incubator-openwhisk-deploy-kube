@@ -718,7 +718,7 @@ objects:
         volumes:
         - name: kafka-logs
           emptyDir: {}
-        - name: kafka-java-logs
+        - name: kafka
           emptyDir: {}
   
         initContainers:
@@ -758,8 +758,8 @@ objects:
           volumeMounts:
             - name: kafka-logs
               mountPath: "/data"
-            - name: kafka-java-logs
-              mountPath: "/logs"
+            - name: kafka
+              mountPath: "/kafka"
 - apiVersion: v1
   kind: Service
   metadata:
