@@ -80,6 +80,9 @@ spec:
         ports:
         - name: invoker
           containerPort: 8080
+        resources:
+          limits:
+            memory: 1Gi
         volumeMounts:
         - name: invoker-config
           mountPath: "/invoker_config"
@@ -217,24 +220,25 @@ spec:
         name: preload-openwhisk-runtimes
     spec:
       restartPolicy: Never
-      containers:
+      initContainers:
       - name: preload-openwhisk-nodejs6
         image: projectodd/nodejs6action:openshift-latest
         imagePullPolicy: IfNotPresent
         command: ["/bin/sh", "-c", "echo", "success"]
-      - name: preload-openwhisk-python2
-        image: projectodd/python2action:openshift-latest
+      - name: preload-openwhisk-java8
+        image: projectodd/java8action:openshift-latest
         imagePullPolicy: IfNotPresent
         command: ["/bin/sh", "-c", "echo", "success"]
       - name: preload-openwhisk-python3
         image: projectodd/python3action:openshift-latest
         imagePullPolicy: IfNotPresent
         command: ["/bin/sh", "-c", "echo", "success"]
-      - name: preload-openwhisk-swift3
-        image: projectodd/swift3action:openshift-latest
+      - name: preload-openwhisk-python2
+        image: projectodd/python2action:openshift-latest
         imagePullPolicy: IfNotPresent
         command: ["/bin/sh", "-c", "echo", "success"]
-      - name: preload-openwhisk-java8
-        image: projectodd/java8action:openshift-latest
+      containers:
+      - name: preload-openwhisk-swift3
+        image: projectodd/swift3action:openshift-latest
         imagePullPolicy: IfNotPresent
         command: ["/bin/sh", "-c", "echo", "success"]

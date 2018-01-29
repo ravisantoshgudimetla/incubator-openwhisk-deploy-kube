@@ -187,6 +187,9 @@ objects:
           ports:
           - name: controller
             containerPort: 8080
+          resources:
+            limits:
+              memory: 1Gi
           env:
           # Properties for controller HA configuration
           # Must change these if changing number of replicas
@@ -418,6 +421,9 @@ objects:
           ports:
           - name: couchdb
             containerPort: 5984
+          resources:
+            limits:
+              memory: 1Gi
           env:
           - name: "DB_PREFIX"
             valueFrom:
@@ -530,6 +536,9 @@ objects:
           ports:
           - name: invoker
             containerPort: 8080
+          resources:
+            limits:
+              memory: 1Gi
           volumeMounts:
           - name: invoker-config
             mountPath: "/invoker_config"
@@ -666,25 +675,26 @@ objects:
           name: preload-openwhisk-runtimes
       spec:
         restartPolicy: Never
-        containers:
+        initContainers:
         - name: preload-openwhisk-nodejs6
           image: projectodd/nodejs6action:openshift-latest
           imagePullPolicy: IfNotPresent
           command: ["/bin/sh", "-c", "echo", "success"]
-        - name: preload-openwhisk-python2
-          image: projectodd/python2action:openshift-latest
+        - name: preload-openwhisk-java8
+          image: projectodd/java8action:openshift-latest
           imagePullPolicy: IfNotPresent
           command: ["/bin/sh", "-c", "echo", "success"]
         - name: preload-openwhisk-python3
           image: projectodd/python3action:openshift-latest
           imagePullPolicy: IfNotPresent
           command: ["/bin/sh", "-c", "echo", "success"]
-        - name: preload-openwhisk-swift3
-          image: projectodd/swift3action:openshift-latest
+        - name: preload-openwhisk-python2
+          image: projectodd/python2action:openshift-latest
           imagePullPolicy: IfNotPresent
           command: ["/bin/sh", "-c", "echo", "success"]
-        - name: preload-openwhisk-java8
-          image: projectodd/java8action:openshift-latest
+        containers:
+        - name: preload-openwhisk-swift3
+          image: projectodd/swift3action:openshift-latest
           imagePullPolicy: IfNotPresent
           command: ["/bin/sh", "-c", "echo", "success"]
 - apiVersion: v1
@@ -732,6 +742,9 @@ objects:
           ports:
           - name: kafka
             containerPort: 9092
+          resources:
+            limits:
+              memory: 1Gi
           env:
           - name: "KAFKA_BROKER_ID"
             value: "0"

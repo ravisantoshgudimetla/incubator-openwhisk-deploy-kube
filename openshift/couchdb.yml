@@ -50,6 +50,9 @@ spec:
         ports:
         - name: couchdb
           containerPort: 5984
+        resources:
+          limits:
+            memory: 1Gi
         env:
         - name: "DB_PREFIX"
           valueFrom:
