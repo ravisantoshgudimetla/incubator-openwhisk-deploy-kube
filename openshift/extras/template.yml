@@ -4,6 +4,21 @@ metadata:
   name: openwhisk
 labels:
   template: openwhisk
+
+parameters:
+- name: CONTROLLER_INSTANCES
+  description: The desired number of controllers
+  value: "2"
+- name: CONTROLLER_HA
+  description: Boolean denoting whether HA mode
+  value: "TRUE"
+- name: CONTROLLER_LOCALBOOKKEEPING
+  description: Boolean denoting whether load balancer data is local or shared
+  value: "FALSE"
+- name: AKKA_CLUSTER_SEED_NODES
+  description: Hostnames of akka seed nodes
+  value: "controller-0.controller controller-1.controller"
+
 objects:
 - apiVersion: v1
   kind: ConfigMap
@@ -171,7 +186,7 @@ objects:
     labels:
       name: controller
   spec:
-    replicas: 1
+    replicas: ${CONTROLLER_INSTANCES}
     serviceName: "controller"
     template:
       metadata:
@@ -194,13 +209,13 @@ objects:
           # Properties for controller HA configuration
           # Must change these if changing number of replicas
           - name: "CONTROLLER_LOCALBOOKKEEPING"
-            value: "TRUE"
+            value: ${CONTROLLER_LOCALBOOKKEEPING}
           - name: "CONTROLLER_HA"
-            value: "FALSE"
+            value: ${CONTROLLER_HA}
           - name: "CONTROLLER_INSTANCES"
-            value: "1"
+            value: ${CONTROLLER_INSTANCES}
           - name: "AKKA_CLUSTER_SEED_NODES"
-            value: "controller-0.controller.openwhisk"
+            value: ${AKKA_CLUSTER_SEED_NODES}
           - name: "CONFIG_akka_actor_provider"
             value: "cluster"
   
